@@ -137,7 +137,10 @@ function renderWeek() {
     const el = document.createElement('div');
     el.className = 'day-card';
     el.innerHTML = `
-      <div class="day-header" style="background:${d.color}">${esc(d.name)}</div>
+      <div class="day-header" style="background:${d.color}; position:relative;">
+        <span data-daykey="${i}.name" data-editable="text">${esc(d.name)}</span>
+        <button class="ec-flex del-corner" onclick="delDay(${i})" title="Delete day">✕</button>
+      </div>
       <div class="day-body">
         <div class="day-label" style="color:${d.color}">Focus</div>
         <div class="day-text" data-daykey="${i}.focus"       data-editable="text">${esc(d.focus)}</div>
@@ -153,6 +156,14 @@ function renderWeek() {
       </div>`;
     grid.appendChild(el);
   });
+  
+  // Add Day button
+  const addBtn = document.createElement('button');
+  addBtn.className = 'add-item-btn ec-flex-center';
+  addBtn.innerHTML = '＋ Add Day';
+  addBtn.onclick = addDay;
+  grid.appendChild(addBtn);
+
   if (isEditMode) bindDayEditors();
 }
 
@@ -167,9 +178,10 @@ function renderExec() {
     const el = document.createElement('div');
     el.className = 'exec-card';
     el.innerHTML = `
-      <div class="exec-header" style="border-bottom-color:${w.color}">
+      <div class="exec-header" style="border-bottom-color:${w.color}; position:relative;">
         <div class="exec-week"  style="color:${w.color}" data-exkey="${i}.week"  data-editable="text">${esc(w.week)}</div>
         <div class="exec-name"  data-exkey="${i}.name"   data-editable="text">${esc(w.name)}</div>
+        <button class="ec-flex del-corner" onclick="delExec(${i})" title="Delete week">✕</button>
       </div>
       <div class="exec-body">
         <div class="exec-desc"  data-exkey="${i}.desc"   data-editable="text">${esc(w.desc)}</div>
@@ -177,6 +189,13 @@ function renderExec() {
       </div>`;
     grid.appendChild(el);
   });
+
+  const addBtn = document.createElement('button');
+  addBtn.className = 'add-item-btn ec-flex-center';
+  addBtn.innerHTML = '＋ Add Phase';
+  addBtn.onclick = addExec;
+  grid.appendChild(addBtn);
+
   if (isEditMode) bindExecEditors();
 }
 
@@ -188,24 +207,42 @@ function renderGoalList(type) {
   if (!el) return;
   el.innerHTML = '';
   appData[type].items.forEach((item, i) => {
+    const todos = item.todos || [];
     const div = document.createElement('div');
     div.className = 'goal-item';
     div.innerHTML = `
-      <div class="goal-icon">${esc(item.icon)}</div>
+      <div class="goal-icon" data-goalkey="${type}.${i}.icon" data-editable="text">${esc(item.icon)}</div>
       <div class="goal-content">
         <div class="goal-item-title" data-goalkey="${type}.${i}.title" data-editable="text">${esc(item.title)}</div>
         <div class="goal-item-desc"  data-goalkey="${type}.${i}.desc"  data-editable="text">${esc(item.desc)}</div>
+        
+        <div class="goal-todos">
+          ${todos.map((todo, tIdx) => `
+            <div class="todo-row">
+              <input type="checkbox" class="todo-cb" ${todo.done ? 'checked' : ''} onchange="toggleTodo('${type}', ${i}, ${tIdx}, this.checked)" ${!isEditMode && !todo.done ? '' : ''}>
+              <span class="todo-txt ${todo.done ? 'done' : ''}" data-todokey="${type}.${i}.${tIdx}" data-editable="text">${esc(todo.text)}</span>
+              <button class="ec-flex todo-del" onclick="delTodo('${type}', ${i}, ${tIdx})">✕</button>
+            </div>
+          `).join('')}
+          <button class="ec-flex todo-add" onclick="addTodo('${type}', ${i})">＋ Add To-Do</button>
+        </div>
+
         <div class="goal-progress">
           <div class="prog-bar">
             <div class="prog-fill" style="width:${item.progress}%"></div>
           </div>
-          <span class="prog-pct">${item.progress}%</span>
+          <span class="prog-pct ec-hide">${item.progress}%</span>
+          <button class="ec-flex prog-edit" onclick="editProgress('${type}', ${i})">${item.progress}% ✎</button>
         </div>
       </div>
       <button class="goal-delete" onclick="deleteGoal('${type}',${i})" title="Delete goal">✕</button>`;
     el.appendChild(div);
   });
-  if (isEditMode) bindGoalEditors(type);
+  
+  if (isEditMode) {
+    bindGoalEditors(type);
+    bindTodoEditors(type);
+  }
 }
 
 // ── RULES ─────────────────────────────────────────────────────────────
@@ -417,6 +454,8 @@ function applyEditState(on) {
     bindExecEditors();
     bindGoalEditors('longterm');
     bindGoalEditors('shortterm');
+    bindTodoEditors('longterm');
+    bindTodoEditors('shortterm');
     setupDragDrop();
   }
 }
@@ -446,8 +485,21 @@ function bindExecEditors() {
 function bindGoalEditors(type) {
   document.querySelectorAll(`[data-goalkey^="${type}."]`).forEach(el => {
     el.oninput = () => {
-      const [, i, f] = el.dataset.goalkey.split('.');
-      appData[type].items[+i][f] = el.textContent.trim();
+      const parts = el.dataset.goalkey.split('.');
+      const i = +parts[1];
+      const f = parts[2];
+      appData[type].items[i][f] = el.textContent.trim();
+    };
+  });
+}
+
+function bindTodoEditors(type) {
+  document.querySelectorAll(`[data-todokey^="${type}."]`).forEach(el => {
+    el.oninput = () => {
+      const parts = el.dataset.todokey.split('.');
+      const gIdx = +parts[1];
+      const tIdx = +parts[2];
+      appData[type].items[gIdx].todos[tIdx].text = el.textContent.trim();
     };
   });
 }
@@ -483,7 +535,7 @@ function harvestAll() {
   });
 }
 
-// ── GOAL CRUD ────────────────────────────────────────────────────────
+// ── GOAL / CRUD / CUSTOMIZATION ──────────────────────────────────────────────
 function addGoal(type) {
   const label = type === 'long' ? 'Long-Term' : 'Short-Term';
   openModal(`Add ${label} Goal`, `
@@ -501,19 +553,95 @@ function addGoal(type) {
         icon:     document.getElementById('m-icon').value.trim()  || '🎯',
         title:    document.getElementById('m-title').value.trim() || 'New Goal',
         desc:     document.getElementById('m-desc').value.trim()  || '',
-        progress: Math.min(100, Math.max(0, parseInt(document.getElementById('m-prog').value) || 0))
+        progress: Math.min(100, Math.max(0, parseInt(document.getElementById('m-prog').value) || 0)),
+        todos: []
       });
       renderGoalList(key);
-      if (isEditMode) { bindGoalEditors(key); applyTableEditState(); }
+      if (isEditMode) { applyEditState(true); }
       toast('Goal added ✓');
     });
 }
 
 function deleteGoal(type, idx) {
   if (!isEditMode) return;
+  if (!confirm('Delete this goal?')) return;
   appData[type].items.splice(idx, 1);
   renderGoalList(type);
-  if (isEditMode) bindGoalEditors(type);
+  if (isEditMode) { applyEditState(true); }
+}
+
+function addTodo(type, gIdx) {
+  if (!appData[type].items[gIdx].todos) appData[type].items[gIdx].todos = [];
+  appData[type].items[gIdx].todos.push({ text: 'New task', done: false });
+  recalcProgress(type, gIdx);
+  renderGoalList(type);
+  if (isEditMode) { applyEditState(true); }
+}
+
+function delTodo(type, gIdx, tIdx) {
+  appData[type].items[gIdx].todos.splice(tIdx, 1);
+  recalcProgress(type, gIdx);
+  renderGoalList(type);
+  if (isEditMode) { applyEditState(true); }
+}
+
+function toggleTodo(type, gIdx, tIdx, checked) {
+  appData[type].items[gIdx].todos[tIdx].done = checked;
+  recalcProgress(type, gIdx);
+  renderGoalList(type);
+  if (isEditMode) { applyEditState(true); }
+  saveData(); // Auto save when checking off tasks!
+}
+
+function recalcProgress(type, gIdx) {
+  const goal = appData[type].items[gIdx];
+  if (!goal.todos || goal.todos.length === 0) return;
+  const done = goal.todos.filter(t => t.done).length;
+  goal.progress = Math.round((done / goal.todos.length) * 100);
+}
+
+function editProgress(type, gIdx) {
+  openModal('Edit Progress', `
+    <label>Progress % (0–100)</label>
+    <input id="m-prog-edit" type="number" min="0" max="100" value="${appData[type].items[gIdx].progress}" />`,
+    () => {
+      appData[type].items[gIdx].progress = Math.min(100, Math.max(0, parseInt(document.getElementById('m-prog-edit').value) || 0));
+      renderGoalList(type);
+      if (isEditMode) { applyEditState(true); }
+    });
+}
+
+function addDay() {
+  appData.week.days.push({
+    name: "New Day", color: "#3b82f6",
+    focus: "Focus area", build: "What to build", theory: "Theory to learn",
+    dsa: "DSA goal", deliverable: "Deliverable"
+  });
+  renderWeek();
+  if (isEditMode) applyEditState(true);
+}
+
+function delDay(idx) {
+  if (!confirm('Delete this day?')) return;
+  appData.week.days.splice(idx, 1);
+  renderWeek();
+  if (isEditMode) applyEditState(true);
+}
+
+function addExec() {
+  appData.exec.weeks.push({
+    week: "NEW", name: "Phase Name", color: "#8b5cf6",
+    desc: "Phase description", proof: "Proof of completion"
+  });
+  renderExec();
+  if (isEditMode) applyEditState(true);
+}
+
+function delExec(idx) {
+  if (!confirm('Delete this phase?')) return;
+  appData.exec.weeks.splice(idx, 1);
+  renderExec();
+  if (isEditMode) applyEditState(true);
 }
 
 // ── MODAL ────────────────────────────────────────────────────────────
