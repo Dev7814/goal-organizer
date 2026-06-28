@@ -130,18 +130,156 @@ function renderBlocks() {
   setEditable('daily.title', appData.daily.title);
   setEditable('daily.sub',   appData.daily.sub);
 
-  const tbody = document.getElementById('blocks-body');
-  tbody.innerHTML = '';
-  appData.daily.blocks.forEach((b, idx) => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td class="block-time" data-blkey="${idx}.time"  data-editable="text">${escHtml(b.time)}</td>
-      <td class="block-name" data-blkey="${idx}.name"  data-editable="text">${escHtml(b.name)}</td>
-      <td class="block-what" data-blkey="${idx}.what"  data-editable="text">${escHtml(b.what)}</td>
-      <td class="block-out"  data-blkey="${idx}.output" data-editable="text">${escHtml(b.output)}</td>`;
-    tbody.appendChild(tr);
+  const wrap = document.querySelector('.table-wrap');
+  if (!wrap) return;
+
+  const cols = appData.daily.columns;
+  const rows = appData.daily.rows;
+
+  // Build header cells
+  const thCells = cols.map((col, ci) => `
+    <th style="position:relative" data-colidx="${ci}">
+      <span class="th-label"
+            data-colidx="${ci}"
+            ${isEditMode ? 'contenteditable="true"' : ''}>${escHtml(col)}</span>
+      ${isEditMode && cols.length > 1
+        ? `<button class="th-del-badge" onclick="deleteBlockColumn(${ci})" title="Remove column">&#215;</button>`
+        : ''}
+    </th>`).join('');
+
+  // Build body rows
+  const trRows = rows.map((row, ri) => `
+    <tr class="block-row" data-rowidx="${ri}" ${isEditMode ? 'draggable="true"' : ''}>
+      ${isEditMode ? `<td class="td-drag"><span class="drag-handle" title="Drag to reorder">⋮⋮</span></td>` : ''}
+      ${cols.map((_, ci) => `<td
+        class="${isEditMode ? 'editable-cell' : 'view-cell'}"
+        data-rowidx="${ri}" data-colidx="${ci}"
+        ${isEditMode ? 'contenteditable="true"' : ''}>${escHtml(row[ci] ?? '')}</td>`).join('')}
+      ${isEditMode ? `<td class="td-add-col-spacer" style="display:none"></td>` : ''}
+      ${isEditMode ? `<td class="td-row-del"><button class="btn-row-del" onclick="deleteBlockRow(${ri})" title="Delete row">&#10005;</button></td>` : ''}
+    </tr>`).join('');
+
+  wrap.innerHTML = `
+    <table class="blocks-table" id="blocks-table">
+      <thead id="blocks-thead">
+        <tr>
+          ${isEditMode ? `<th class="th-drag-col"></th>` : ''}
+          ${thCells}
+          ${isEditMode ? `<th class="th-add-col"><button class="btn-add-col" onclick="addBlockColumn()">&#43; Col</button></th>` : ''}
+          ${isEditMode ? `<th class="th-row-del-header"></th>` : ''}
+        </tr>
+      </thead>
+      <tbody id="blocks-body">${trRows}</tbody>
+    </table>
+    <button class="btn-add-row" onclick="addBlockRow()">&#43;&nbsp;&nbsp;Add Row</button>`;
+
+  if (isEditMode) {
+    bindBlockCellEditors();
+    setupBlockDragDrop();
+  }
+}
+
+// Live-bind input events on block table cells and header spans
+function bindBlockCellEditors() {
+  // Column header spans
+  document.querySelectorAll('#blocks-thead .th-label[contenteditable]').forEach(span => {
+    span.addEventListener('input', () => {
+      appData.daily.columns[parseInt(span.dataset.colidx)] = span.innerText.trim();
+    });
   });
-  if (isEditMode) activateBlockEditors();
+  // Body cells
+  document.querySelectorAll('#blocks-body td[data-rowidx][contenteditable]').forEach(td => {
+    td.addEventListener('input', () => {
+      const ri = parseInt(td.dataset.rowidx);
+      const ci = parseInt(td.dataset.colidx);
+      if (!appData.daily.rows[ri]) appData.daily.rows[ri] = Array(appData.daily.columns.length).fill('');
+      appData.daily.rows[ri][ci] = td.innerText.trim();
+    });
+  });
+}
+
+// Drag-to-reorder rows
+function setupBlockDragDrop() {
+  let srcIdx = null;
+  document.querySelectorAll('.block-row').forEach(row => {
+    row.addEventListener('dragstart', e => {
+      srcIdx = parseInt(row.dataset.rowidx);
+      row.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    row.addEventListener('dragend', () => {
+      row.classList.remove('dragging');
+      document.querySelectorAll('.block-row').forEach(r => r.classList.remove('drag-over'));
+    });
+    row.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      document.querySelectorAll('.block-row').forEach(r => r.classList.remove('drag-over'));
+      row.classList.add('drag-over');
+    });
+    row.addEventListener('drop', e => {
+      e.preventDefault();
+      row.classList.remove('drag-over');
+      const destIdx = parseInt(row.dataset.rowidx);
+      if (srcIdx !== null && srcIdx !== destIdx) {
+        const moved = appData.daily.rows.splice(srcIdx, 1)[0];
+        appData.daily.rows.splice(destIdx, 0, moved);
+        renderBlocks();
+        bindBlockCellEditors();
+        setupBlockDragDrop();
+      }
+      srcIdx = null;
+    });
+  });
+}
+
+// Add a new empty row
+function addBlockRow() {
+  const numCols = appData.daily.columns.length;
+  appData.daily.rows.push(Array(numCols).fill(''));
+  renderBlocks();
+  // Animate + focus first cell of new row
+  setTimeout(() => {
+    const newRow = document.querySelector('#blocks-body .block-row:last-child');
+    if (newRow) {
+      newRow.classList.add('new-row');
+      const firstCell = newRow.querySelector('td.editable-cell');
+      if (firstCell) firstCell.focus();
+    }
+  }, 30);
+}
+
+// Delete a row by index
+function deleteBlockRow(ri) {
+  if (appData.daily.rows.length <= 1) { showToast('Need at least one row 😌'); return; }
+  appData.daily.rows.splice(ri, 1);
+  renderBlocks();
+  showToast('Row removed');
+}
+
+// Open modal to add a new column
+function addBlockColumn() {
+  document.getElementById('modal-title').textContent = 'Add Column';
+  document.getElementById('modal-body').innerHTML =
+    `<input id="m-col-name" type="text" placeholder="Column name (e.g. PRIORITY)" />`;
+  pendingModalCallback = () => {
+    const name = (document.getElementById('m-col-name').value || '').trim() || 'NEW COLUMN';
+    appData.daily.columns.push(name.toUpperCase());
+    appData.daily.rows.forEach(row => row.push(''));
+    renderBlocks();
+    showToast(`“${name}” column added ✓`);
+  };
+  document.getElementById('modal-overlay').classList.remove('hidden');
+}
+
+// Delete a column by index
+function deleteBlockColumn(ci) {
+  if (appData.daily.columns.length <= 1) { showToast('Need at least one column'); return; }
+  if (!confirm(`Delete column "${appData.daily.columns[ci]}"? All data will be lost.`)) return;
+  appData.daily.columns.splice(ci, 1);
+  appData.daily.rows.forEach(row => row.splice(ci, 1));
+  renderBlocks();
+  showToast('Column removed');
 }
 
 function renderExec() {
@@ -229,16 +367,7 @@ function activateDayEditors() {
   });
 }
 
-function activateBlockEditors() {
-  document.querySelectorAll('[data-blkey][data-editable]').forEach(el => {
-    if (el._blBound) return;
-    el._blBound = true;
-    el.addEventListener('input', () => {
-      const [idx, field] = el.dataset.blkey.split('.');
-      appData.daily.blocks[idx][field] = el.textContent.trim();
-    });
-  });
-}
+// (Block editors handled by bindBlockCellEditors() — generated per render)
 
 function activateExecEditors() {
   document.querySelectorAll('[data-exkey][data-editable]').forEach(el => {
@@ -277,9 +406,16 @@ function harvestInlineEdits() {
       appData.week.days[idx][field] = el.textContent.trim();
     }
   });
-  document.querySelectorAll('[data-blkey]').forEach(el => {
-    const [idx, field] = el.dataset.blkey.split('.');
-    appData.daily.blocks[idx][field] = el.textContent.trim();
+  // Harvest block table
+  document.querySelectorAll('#blocks-thead .th-label[data-colidx]').forEach(span => {
+    appData.daily.columns[parseInt(span.dataset.colidx)] = span.innerText.trim();
+  });
+  document.querySelectorAll('#blocks-body .block-row').forEach((tr, ri) => {
+    tr.querySelectorAll('td[data-colidx]').forEach(td => {
+      const ci = parseInt(td.dataset.colidx);
+      if (!appData.daily.rows[ri]) appData.daily.rows[ri] = Array(appData.daily.columns.length).fill('');
+      appData.daily.rows[ri][ci] = td.innerText.trim();
+    });
   });
   document.querySelectorAll('[data-exkey]').forEach(el => {
     const [idx, field] = el.dataset.exkey.split('.');
@@ -316,8 +452,8 @@ function toggleEdit() {
     document.querySelectorAll('[data-editable]').forEach(el => {
       el.contentEditable = 'true';
     });
+    renderBlocks(); // re-render with edit controls (drag handles, add col/row buttons)
     activateDayEditors();
-    activateBlockEditors();
     activateExecEditors();
     activateGoalEditors('longterm');
     activateGoalEditors('shortterm');
@@ -328,7 +464,7 @@ function toggleEdit() {
     btnReset.classList.add('hidden');
     btnAddL.style.display = 'none';
     btnAddS.style.display = 'none';
-
+    renderBlocks(); // re-render without edit controls
     document.querySelectorAll('[data-editable]').forEach(el => {
       el.contentEditable = 'false';
     });

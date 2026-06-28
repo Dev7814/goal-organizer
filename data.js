@@ -84,13 +84,14 @@ const DEFAULT_DATA = {
   daily: {
     title: "Ideal Day Blocks",
     sub:   "Keep the same sequence even if you shift the clock. DSA first, project build second, theory after hands-on work.",
-    blocks: [
-      { time: "06:30–07:00", name: "Prime the day",    what: "Plan 3 tasks, open yesterday's notes, remove distractions",               output: "Clear target" },
-      { time: "07:00–08:15", name: "DSA practice",     what: "One focused LeetCode problem; explain approach aloud",                    output: "Accepted + notes" },
-      { time: "09:00–17:30", name: "Work, college, life",what: "Use tiny breaks for reading docs or reviewing flash notes",             output: "No guilt block" },
-      { time: "18:30–20:30", name: "OrderStream build", what: "Implement one real feature from the weekly theme",                       output: "Working code" },
-      { time: "20:45–21:30", name: "Theory + design",   what: "Read docs, draw system design, write tradeoff notes",                   output: "1-page note" },
-      { time: "21:30–22:00", name: "Close the loop",    what: "Run tests, commit, write tomorrow's first task",                        output: "Commit done" }
+    columns: ["TIME", "BLOCK", "WHAT TO DO", "OUTPUT"],
+    rows: [
+      ["06:30–07:00", "Prime the day",      "Plan 3 tasks, open yesterday's notes, remove distractions",  "Clear target"],
+      ["07:00–08:15", "DSA practice",       "One focused LeetCode problem; explain approach aloud",        "Accepted + notes"],
+      ["09:00–17:30", "Work, college, life", "Use tiny breaks for reading docs or reviewing flash notes",  "No guilt block"],
+      ["18:30–20:30", "OrderStream build",  "Implement one real feature from the weekly theme",            "Working code"],
+      ["20:45–21:30", "Theory + design",    "Read docs, draw system design, write tradeoff notes",        "1-page note"],
+      ["21:30–22:00", "Close the loop",     "Run tests, commit, write tomorrow's first task",             "Commit done"]
     ]
   },
 

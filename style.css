@@ -280,48 +280,286 @@ body.edit-mode [data-editable]:focus { outline: 2px solid var(--accent-2); backg
   font-style: italic;
 }
 
-/* ── BLOCKS TABLE ── */
+/* ── BLOCKS TABLE — PREMIUM ── */
 .table-wrap {
   background: var(--surface);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-md);
   overflow-x: auto;
+  position: relative;
 }
 .blocks-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   font-size: .88rem;
+  min-width: 580px;
 }
+
+/* ── HEADER ── */
 .blocks-table thead th {
   background: var(--accent-1);
-  color: #a5b4d4;
-  font-size: .68rem;
+  color: #8faed4;
+  font-size: .66rem;
   font-weight: 700;
-  letter-spacing: .1em;
+  letter-spacing: .12em;
   text-transform: uppercase;
-  padding: 14px 20px;
+  padding: 16px 20px;
   text-align: left;
+  position: relative;
+  white-space: nowrap;
+  border-bottom: 2px solid rgba(255,255,255,0.06);
 }
-.blocks-table tbody tr {
+.blocks-table thead th:first-child { border-radius: var(--radius-md) 0 0 0; }
+.blocks-table thead th:last-child  { border-radius: 0 var(--radius-md) 0 0; }
+
+/* Editable column header label */
+.th-label { display: inline-block; outline: none; }
+body.edit-mode .th-label {
+  cursor: text;
+  border-bottom: 1.5px dashed rgba(255,255,255,0.3);
+  padding-bottom: 1px;
+  border-radius: 2px;
+  transition: border-color .15s;
+}
+body.edit-mode .th-label:hover  { border-color: rgba(255,255,255,0.7); }
+body.edit-mode .th-label:focus  {
+  border-color: #fff;
+  background: rgba(255,255,255,0.08);
+  box-shadow: 0 0 0 3px rgba(255,255,255,0.1);
+  border-radius: 4px;
+  padding: 1px 4px;
+}
+
+/* Delete column badge */
+.th-del-badge {
+  position: absolute;
+  top: 5px; right: 5px;
+  background: rgba(220,38,38,0.8);
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  width: 16px; height: 16px;
+  font-size: .6rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  transition: transform .15s, background .15s;
+  z-index: 2;
+}
+body.edit-mode .th-del-badge { display: flex; }
+.th-del-badge:hover { transform: scale(1.25); background: #dc2626; }
+
+/* Add-column th */
+.th-add-col {
+  display: none;
+  width: 56px;
+  padding: 12px 8px !important;
+  text-align: center;
+  background: rgba(255,255,255,0.03) !important;
+}
+body.edit-mode .th-add-col { display: table-cell; }
+.btn-add-col {
+  background: none;
+  border: 1.5px dashed rgba(255,255,255,0.3);
+  color: rgba(255,255,255,0.6);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: .72rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .15s;
+  white-space: nowrap;
+  font-family: var(--font-base);
+}
+.btn-add-col:hover {
+  border-color: rgba(255,255,255,0.8);
+  color: #fff;
+  background: rgba(255,255,255,0.1);
+}
+
+/* Drag + delete control headers */
+.th-drag-col, .th-row-del-header {
+  display: none;
+  width: 36px;
+  padding: 0 !important;
+  background: var(--accent-1) !important;
+}
+body.edit-mode .th-drag-col,
+body.edit-mode .th-row-del-header { display: table-cell; }
+
+/* ── BODY ROWS ── */
+.blocks-table tbody tr.block-row {
   border-bottom: 1px solid var(--border);
-  transition: background .15s;
+  transition: background .12s;
+  position: relative;
 }
-.blocks-table tbody tr:last-child { border-bottom: none; }
-.blocks-table tbody tr:hover { background: var(--surface-alt); }
-.blocks-table td {
+.blocks-table tbody tr.block-row:last-child { border-bottom: none; }
+.blocks-table tbody tr.block-row:hover { background: #f7f8fc; }
+
+/* Per-row left accent (cycles through palette) */
+.blocks-table tbody tr.block-row:nth-child(1)  { --ra: #2563eb; }
+.blocks-table tbody tr.block-row:nth-child(2)  { --ra: #7c3aed; }
+.blocks-table tbody tr.block-row:nth-child(3)  { --ra: #059669; }
+.blocks-table tbody tr.block-row:nth-child(4)  { --ra: #d97706; }
+.blocks-table tbody tr.block-row:nth-child(5)  { --ra: #0e7490; }
+.blocks-table tbody tr.block-row:nth-child(6)  { --ra: #dc2626; }
+.blocks-table tbody tr.block-row:nth-child(7)  { --ra: #6d28d9; }
+.blocks-table tbody tr.block-row:nth-child(8)  { --ra: #047857; }
+.blocks-table tbody tr.block-row:nth-child(9)  { --ra: #b45309; }
+.blocks-table tbody tr.block-row:nth-child(10) { --ra: #0c4a6e; }
+
+/* Apply accent to drag handle (edit) or first data cell (view) */
+body.edit-mode .blocks-table .td-drag { border-left: 4px solid var(--ra, var(--accent-2)); }
+.blocks-table tbody tr.block-row .view-cell:first-child { border-left: 4px solid var(--ra, var(--accent-2)); }
+
+/* Data cells (view mode) */
+.blocks-table td.view-cell {
   padding: 14px 20px;
   vertical-align: middle;
+  color: var(--text);
+  line-height: 1.5;
 }
-.block-time {
+/* First col: time — bold blue */
+.blocks-table tbody tr.block-row .view-cell:nth-child(1) {
   font-weight: 700;
   color: var(--accent-2);
-  font-size: .85rem;
-  white-space: nowrap;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
-.block-name  { font-weight: 700; color: var(--text); }
-.block-what  { color: var(--text-muted); }
-.block-out   { color: var(--accent-4); font-weight: 600; font-size: .82rem; white-space: nowrap; }
+/* Second col: block name */
+.blocks-table tbody tr.block-row .view-cell:nth-child(2) { font-weight: 700; color: var(--text); }
+/* Third col: description */
+.blocks-table tbody tr.block-row .view-cell:nth-child(3) { color: var(--text-muted); }
+/* Last col: output — green bold */
+.blocks-table tbody tr.block-row .view-cell:last-child {
+  font-weight: 600;
+  color: var(--accent-4);
+  font-size: .82rem;
+}
+
+/* ── DRAG HANDLE ── */
+.td-drag {
+  width: 32px;
+  padding: 0 6px !important;
+  text-align: center;
+  display: none;
+  vertical-align: middle;
+  cursor: grab;
+}
+body.edit-mode .td-drag { display: table-cell; }
+.drag-handle {
+  font-size: 1.1rem;
+  color: #c4ccd8;
+  cursor: grab;
+  user-select: none;
+  transition: color .15s;
+  display: inline-block;
+  line-height: 1;
+}
+.blocks-table tr:hover .drag-handle { color: #94a3b8; }
+body.edit-mode .blocks-table tr.block-row:active { cursor: grabbing; }
+
+/* ── EDIT MODE CELLS ── */
+body.edit-mode .blocks-table td.editable-cell {
+  padding: 10px 12px;
+  vertical-align: middle;
+  cursor: text;
+  position: relative;
+  min-width: 80px;
+  line-height: 1.5;
+}
+body.edit-mode .blocks-table td.editable-cell > div,
+body.edit-mode .blocks-table td.editable-cell[contenteditable] {
+  background: rgba(37,99,235,.04);
+  border: 1.5px dashed rgba(37,99,235,.25);
+  border-radius: 8px;
+  padding: 7px 11px;
+  min-height: 36px;
+  transition: all .15s;
+  outline: none;
+  display: block;
+}
+body.edit-mode .blocks-table td.editable-cell[contenteditable]:hover {
+  border-color: rgba(37,99,235,.5);
+  border-style: solid;
+  background: rgba(37,99,235,.07);
+}
+body.edit-mode .blocks-table td.editable-cell[contenteditable]:focus {
+  border-color: var(--accent-2);
+  border-style: solid;
+  background: rgba(37,99,235,.09);
+  box-shadow: 0 0 0 4px rgba(37,99,235,.14), 0 2px 8px rgba(37,99,235,.12);
+  transform: scale(1.01);
+}
+
+/* ── ROW DELETE BUTTON ── */
+.td-row-del {
+  width: 36px;
+  padding: 0 4px !important;
+  text-align: center;
+  display: none;
+  vertical-align: middle;
+}
+body.edit-mode .td-row-del { display: table-cell; }
+.th-row-del-header { width: 36px; }
+.btn-row-del {
+  background: none;
+  border: none;
+  cursor: pointer;
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .78rem;
+  color: #c4ccd8;
+  transition: all .15s;
+  opacity: 0;
+  margin: 0 auto;
+}
+.blocks-table tr:hover .btn-row-del { opacity: 1; }
+.btn-row-del:hover { background: rgba(220,38,38,.1); color: #dc2626; transform: scale(1.1); }
+
+/* ── DRAG STATES ── */
+.blocks-table tr.block-row.dragging { opacity: 0.25; }
+.blocks-table tr.block-row.drag-over td {
+  background: rgba(37,99,235,.1) !important;
+  border-top: 2px solid var(--accent-2) !important;
+}
+
+/* ── ROW ENTRANCE ANIMATION ── */
+@keyframes rowSlideIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.block-row.new-row td { animation: rowSlideIn .22s ease forwards; }
+
+/* ── ADD ROW BUTTON ── */
+.btn-add-row {
+  display: none;
+  width: 100%;
+  background: none;
+  border: none;
+  border-top: 2px dashed rgba(37,99,235,.2);
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  padding: 13px 20px;
+  color: var(--accent-2);
+  font-weight: 700;
+  font-size: .85rem;
+  cursor: pointer;
+  transition: all .15s;
+  text-align: left;
+  font-family: var(--font-base);
+  letter-spacing: .01em;
+}
+body.edit-mode .btn-add-row { display: block; }
+.btn-add-row:hover {
+  background: rgba(37,99,235,.05);
+  border-color: var(--accent-2);
+  padding-left: 28px;
+}
 
 /* ── EXEC MAP ── */
 .exec-grid {
