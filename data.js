@@ -112,11 +112,26 @@ const DEFAULT_DATA = {
     title: "Long-Term Goals",
     sub:   "The north stars that everything else feeds into. Review monthly.",
     items: [
-      { icon: "🏢", title: "Land a FAANG/FAANG-adjacent role",      desc: "SWE or Data Engineer at a top-tier company within 12 months",   progress: 25 },
-      { icon: "🚀", title: "Ship OrderStream to production",         desc: "Full-stack distributed system with Kafka, Spark, Kubernetes",    progress: 40 },
-      { icon: "📈", title: "Portfolio with 3 demo-ready projects",   desc: "Each with README, live demo, and metrics screenshots",           progress: 35 },
-      { icon: "🧠", title: "Master system design interviews",        desc: "Solve any design question clearly and explain all tradeoffs",    progress: 30 },
-      { icon: "💡", title: "Become a recognized open-source contributor", desc: "Meaningful PRs to tools used by > 1k people",              progress: 10 }
+      { 
+        icon: "🏢", title: "Land a FAANG/FAANG-adjacent role", desc: "SWE or Data Engineer at a top-tier company within 12 months", progress: 25,
+        todos: [ {text: "Update Resume with OrderStream", done: false}, {text: "Apply to 20 companies", done: false}, {text: "Mock interview with friend", done: false} ]
+      },
+      { 
+        icon: "🚀", title: "Ship OrderStream to production", desc: "Full-stack distributed system with Kafka, Spark, Kubernetes", progress: 40,
+        todos: [ {text: "Complete backend services", done: true}, {text: "Setup Kubernetes cluster", done: false}, {text: "Deploy to AWS", done: false} ]
+      },
+      { 
+        icon: "📈", title: "Portfolio with 3 demo-ready projects", desc: "Each with README, live demo, and metrics screenshots", progress: 35,
+        todos: [ {text: "Finish Project 1 Docs", done: true}, {text: "Start Project 2 MVP", done: false} ]
+      },
+      { 
+        icon: "🧠", title: "Master system design interviews", desc: "Solve any design question clearly and explain all tradeoffs", progress: 30,
+        todos: [ {text: "Read DDIA Chapter 1-5", done: true}, {text: "Practice Twitter architecture", done: false} ]
+      },
+      { 
+        icon: "💡", title: "Become a recognized open-source contributor", desc: "Meaningful PRs to tools used by > 1k people", progress: 10,
+        todos: [ {text: "Find 2 good first issues", done: false}, {text: "Submit first PR", done: false} ]
+      }
     ]
   },
 
@@ -124,11 +139,26 @@ const DEFAULT_DATA = {
     title: "Short-Term Goals",
     sub:   "Focus items for this week and next. Check off and replace as you go.",
     items: [
-      { icon: "✅", title: "Complete FastAPI orders endpoint",        desc: "With Postgres schema, migrations, and Swagger docs",            progress: 80 },
-      { icon: "⚡", title: "Solve 5 LeetCode mediums this week",     desc: "Focus: arrays, graphs, and dynamic programming patterns",       progress: 60 },
-      { icon: "📝", title: "Write system design note on Kafka",      desc: "1-pager: producers, partitions, consumer groups, at-least-once",progress: 50 },
-      { icon: "🔧", title: "Add Redis caching to the orders API",    desc: "Cache-aside pattern with TTL and invalidation on write",        progress: 20 },
-      { icon: "📹", title: "Record a 3-min demo video",              desc: "Show the API running end-to-end with Postman collection",       progress: 0  }
+      { 
+        icon: "✅", title: "Complete FastAPI orders endpoint", desc: "With Postgres schema, migrations, and Swagger docs", progress: 80,
+        todos: [ {text: "Define DB schema", done: true}, {text: "Write Alembic migrations", done: true}, {text: "Write CRUD endpoints", done: true}, {text: "Add Swagger annotations", done: false} ]
+      },
+      { 
+        icon: "⚡", title: "Solve 5 LeetCode mediums this week", desc: "Focus: arrays, graphs, and dynamic programming patterns", progress: 60,
+        todos: [ {text: "Problem 1 (Graph)", done: true}, {text: "Problem 2 (Graph)", done: true}, {text: "Problem 3 (DP)", done: true}, {text: "Problem 4 (DP)", done: false}, {text: "Problem 5 (Array)", done: false} ]
+      },
+      { 
+        icon: "📝", title: "Write system design note on Kafka", desc: "1-pager: producers, partitions, consumer groups, at-least-once", progress: 50,
+        todos: [ {text: "Research partitions", done: true}, {text: "Draw architecture diagram", done: false} ]
+      },
+      { 
+        icon: "🔧", title: "Add Redis caching to the orders API", desc: "Cache-aside pattern with TTL and invalidation on write", progress: 20,
+        todos: [ {text: "Setup Redis locally", done: true}, {text: "Implement cache aside", done: false} ]
+      },
+      { 
+        icon: "📹", title: "Record a 3-min demo video", desc: "Show the API running end-to-end with Postman collection", progress: 0,
+        todos: [ {text: "Write video script", done: false}, {text: "Record screen", done: false}, {text: "Edit and upload", done: false} ]
+      }
     ]
   },
 
