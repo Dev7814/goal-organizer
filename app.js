@@ -1,329 +1,182 @@
 /**
- * app.js — Goal Organizer application logic
- * Handles: rendering, edit mode, localStorage persistence,
- *          import/export, and dynamic add/delete of items.
+ * app.js — Goal Organizer v3
+ * Clean architecture: edit controls always in DOM, toggled via CSS + contenteditable
  */
 
-// ── STATE ──────────────────────────────────────────────
-const STORAGE_KEY = 'goal-organizer-v1';
-let appData = null;
+// ── STATE ──────────────────────────────────────────────────
+const STORAGE_KEY = 'goal-organizer-v3';
+let appData    = null;
 let isEditMode = false;
-let pendingModalCallback = null;
+let pendingModalCb = null;
 
-// ── INIT ───────────────────────────────────────────────
+// ── INIT ───────────────────────────────────────────────────
 function init() {
   appData = loadData();
+  applyDarkPref();
   renderAll();
-  bindInlineEditors();
 }
 
-// ── DATA PERSISTENCE ───────────────────────────────────
+// ── PERSISTENCE ────────────────────────────────────────────
 function loadData() {
   try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) return JSON.parse(saved);
-  } catch(e) { console.warn('Could not load saved data', e); }
-  return JSON.parse(JSON.stringify(DEFAULT_DATA));  // deep clone default
+    const s = localStorage.getItem(STORAGE_KEY);
+    if (s) return JSON.parse(s);
+  } catch(e) { console.warn(e); }
+  return JSON.parse(JSON.stringify(DEFAULT_DATA));
 }
 
 function saveData() {
-  // Harvest inline-edited text back into appData
-  harvestInlineEdits();
+  harvestAll();
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
-    showToast('Saved! ✅');
-  } catch(e) { showToast('Save failed ❌'); }
+    toast('Saved ✅');
+  } catch(e) { toast('Save failed ❌'); }
 }
 
 function resetData() {
-  if (!confirm('Reset ALL content to default? This cannot be undone.')) return;
+  if (!confirm('Reset ALL content to defaults? Cannot be undone.')) return;
   localStorage.removeItem(STORAGE_KEY);
   appData = JSON.parse(JSON.stringify(DEFAULT_DATA));
   renderAll();
-  bindInlineEditors();
-  showToast('Reset to defaults 🔄');
+  if (isEditMode) applyEditableState(true);
+  toast('Reset ↩');
 }
 
-// ── EXPORT / IMPORT ────────────────────────────────────
+// ── IMPORT / EXPORT ────────────────────────────────────────
 function exportJSON() {
-  harvestInlineEdits();
-  const blob = new Blob([JSON.stringify(appData, null, 2)], { type: 'application/json' });
+  harvestAll();
+  const b = new Blob([JSON.stringify(appData, null, 2)], {type: 'application/json'});
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'goal-organizer-data.json';
+  a.href = URL.createObjectURL(b);
+  a.download = 'goal-organizer.json';
   a.click();
 }
 
-function importJSON(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (e) => {
+function importJSON(e) {
+  const f = e.target.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = ev => {
     try {
-      appData = JSON.parse(e.target.result);
+      appData = JSON.parse(ev.target.result);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
       renderAll();
-      bindInlineEditors();
-      showToast('Imported! ✅');
-    } catch(err) { showToast('Invalid JSON file ❌'); }
+      if (isEditMode) applyEditableState(true);
+      toast('Imported ✅');
+    } catch { toast('Invalid JSON ❌'); }
   };
-  reader.readAsText(file);
-  event.target.value = '';
+  r.readAsText(f);
+  e.target.value = '';
 }
 
-// ── RENDER ENGINE ──────────────────────────────────────
+// ── DARK MODE ──────────────────────────────────────────────
+function applyDarkPref() {
+  const isDark = localStorage.getItem('dark') === '1';
+  document.documentElement.dataset.dark = isDark;
+  document.getElementById('btn-dark').textContent = isDark ? '☀️' : '🌙';
+}
+
+function toggleDark() {
+  const isDark = document.documentElement.dataset.dark !== 'true';
+  document.documentElement.dataset.dark = isDark;
+  localStorage.setItem('dark', isDark ? '1' : '0');
+  document.getElementById('btn-dark').textContent = isDark ? '☀️' : '🌙';
+}
+
+// ── RENDER ALL ─────────────────────────────────────────────
 function renderAll() {
   renderHero();
   renderCards();
   renderWeek();
-  renderBlocks();
+  renderBlocks();   // ← generates always-in-DOM edit controls
   renderExec();
   renderGoalList('longterm');
   renderGoalList('shortterm');
   renderRules();
 }
 
+// ── HERO ───────────────────────────────────────────────────
 function renderHero() {
-  setEditable('hero.badge',  appData.hero.badge);
-  setEditable('hero.title',  appData.hero.title);
-  setEditable('hero.sub1',   appData.hero.sub1);
-  setEditable('hero.sub2',   appData.hero.sub2);
+  setTxt('hero.badge', appData.hero.badge);
+  setTxt('hero.title', appData.hero.title);
+  setTxt('hero.sub1',  appData.hero.sub1);
+  setTxt('hero.sub2',  appData.hero.sub2);
 }
 
+// ── GOAL CARDS ─────────────────────────────────────────────
 function renderCards() {
   appData.cards.forEach((c, i) => {
-    setEditable(`cards.${i}.label`, c.label);
-    setEditable(`cards.${i}.title`, c.title);
-    setEditable(`cards.${i}.desc`,  c.desc);
+    setTxt(`cards.${i}.label`, c.label);
+    setTxt(`cards.${i}.title`, c.title);
+    setTxt(`cards.${i}.desc`,  c.desc);
   });
 }
 
+// ── WEEKLY GRID ────────────────────────────────────────────
 function renderWeek() {
-  setEditable('week.title', appData.week.title);
-  setEditable('week.sub',   appData.week.sub);
-
+  setTxt('week.title', appData.week.title);
+  setTxt('week.sub',   appData.week.sub);
   const grid = document.getElementById('week-grid');
   grid.innerHTML = '';
-  appData.week.days.forEach((day, idx) => {
-    const card = document.createElement('div');
-    card.className = 'day-card';
-    card.dataset.dayIdx = idx;
-    card.innerHTML = `
-      <div class="day-header" style="background:${day.color}">${escHtml(day.name)}</div>
+  appData.week.days.forEach((d, i) => {
+    const el = document.createElement('div');
+    el.className = 'day-card';
+    el.innerHTML = `
+      <div class="day-header" style="background:${d.color}">${esc(d.name)}</div>
       <div class="day-body">
-        <div class="day-section-label" style="color:${day.color}">FOCUS</div>
-        <div class="day-section-text" data-daykey="${idx}.focus" data-editable="text">${escHtml(day.focus)}</div>
-        <div class="day-section-label" style="color:${day.color}">BUILD</div>
-        <div class="day-section-text" data-daykey="${idx}.build" data-editable="text">${escHtml(day.build)}</div>
-        <div class="day-section-label" style="color:${day.color}">THEORY</div>
-        <div class="day-section-text" data-daykey="${idx}.theory" data-editable="text">${escHtml(day.theory)}</div>
-        <div class="day-section-label" style="color:${day.color}">DSA</div>
-        <div class="day-section-text" data-daykey="${idx}.dsa" data-editable="text">${escHtml(day.dsa)}</div>
-        <div class="day-deliverable" data-daykey="${idx}.deliverable" data-editable="text">Deliverable: ${escHtml(day.deliverable)}</div>
+        <div class="day-label" style="color:${d.color}">FOCUS</div>
+        <div class="day-text"  data-daykey="${i}.focus"      data-editable="text">${esc(d.focus)}</div>
+        <div class="day-label" style="color:${d.color}">BUILD</div>
+        <div class="day-text"  data-daykey="${i}.build"      data-editable="text">${esc(d.build)}</div>
+        <div class="day-label" style="color:${d.color}">THEORY</div>
+        <div class="day-text"  data-daykey="${i}.theory"     data-editable="text">${esc(d.theory)}</div>
+        <div class="day-label" style="color:${d.color}">DSA</div>
+        <div class="day-text"  data-daykey="${i}.dsa"        data-editable="text">${esc(d.dsa)}</div>
+        <div class="day-deliver" data-daykey="${i}.deliverable" data-editable="text">
+          Deliverable: ${esc(d.deliverable)}
+        </div>
       </div>`;
-    grid.appendChild(card);
+    grid.appendChild(el);
   });
-  if (isEditMode) activateDayEditors();
+  if (isEditMode) bindDayEditors();
 }
 
-function renderBlocks() {
-  setEditable('daily.title', appData.daily.title);
-  setEditable('daily.sub',   appData.daily.sub);
-
-  const wrap = document.querySelector('.table-wrap');
-  if (!wrap) return;
-
-  const cols = appData.daily.columns;
-  const rows = appData.daily.rows;
-
-  // Build header cells
-  const thCells = cols.map((col, ci) => `
-    <th style="position:relative" data-colidx="${ci}">
-      <span class="th-label"
-            data-colidx="${ci}"
-            ${isEditMode ? 'contenteditable="true"' : ''}>${escHtml(col)}</span>
-      ${isEditMode && cols.length > 1
-        ? `<button class="th-del-badge" onclick="deleteBlockColumn(${ci})" title="Remove column">&#215;</button>`
-        : ''}
-    </th>`).join('');
-
-  // Build body rows
-  const trRows = rows.map((row, ri) => `
-    <tr class="block-row" data-rowidx="${ri}" ${isEditMode ? 'draggable="true"' : ''}>
-      ${isEditMode ? `<td class="td-drag"><span class="drag-handle" title="Drag to reorder">⋮⋮</span></td>` : ''}
-      ${cols.map((_, ci) => `<td
-        class="${isEditMode ? 'editable-cell' : 'view-cell'}"
-        data-rowidx="${ri}" data-colidx="${ci}"
-        ${isEditMode ? 'contenteditable="true"' : ''}>${escHtml(row[ci] ?? '')}</td>`).join('')}
-      ${isEditMode ? `<td class="td-add-col-spacer" style="display:none"></td>` : ''}
-      ${isEditMode ? `<td class="td-row-del"><button class="btn-row-del" onclick="deleteBlockRow(${ri})" title="Delete row">&#10005;</button></td>` : ''}
-    </tr>`).join('');
-
-  wrap.innerHTML = `
-    <table class="blocks-table" id="blocks-table">
-      <thead id="blocks-thead">
-        <tr>
-          ${isEditMode ? `<th class="th-drag-col"></th>` : ''}
-          ${thCells}
-          ${isEditMode ? `<th class="th-add-col"><button class="btn-add-col" onclick="addBlockColumn()">&#43; Col</button></th>` : ''}
-          ${isEditMode ? `<th class="th-row-del-header"></th>` : ''}
-        </tr>
-      </thead>
-      <tbody id="blocks-body">${trRows}</tbody>
-    </table>
-    <button class="btn-add-row" onclick="addBlockRow()">&#43;&nbsp;&nbsp;Add Row</button>`;
-
-  if (isEditMode) {
-    bindBlockCellEditors();
-    setupBlockDragDrop();
-  }
-}
-
-// Live-bind input events on block table cells and header spans
-function bindBlockCellEditors() {
-  // Column header spans
-  document.querySelectorAll('#blocks-thead .th-label[contenteditable]').forEach(span => {
-    span.addEventListener('input', () => {
-      appData.daily.columns[parseInt(span.dataset.colidx)] = span.innerText.trim();
-    });
-  });
-  // Body cells
-  document.querySelectorAll('#blocks-body td[data-rowidx][contenteditable]').forEach(td => {
-    td.addEventListener('input', () => {
-      const ri = parseInt(td.dataset.rowidx);
-      const ci = parseInt(td.dataset.colidx);
-      if (!appData.daily.rows[ri]) appData.daily.rows[ri] = Array(appData.daily.columns.length).fill('');
-      appData.daily.rows[ri][ci] = td.innerText.trim();
-    });
-  });
-}
-
-// Drag-to-reorder rows
-function setupBlockDragDrop() {
-  let srcIdx = null;
-  document.querySelectorAll('.block-row').forEach(row => {
-    row.addEventListener('dragstart', e => {
-      srcIdx = parseInt(row.dataset.rowidx);
-      row.classList.add('dragging');
-      e.dataTransfer.effectAllowed = 'move';
-    });
-    row.addEventListener('dragend', () => {
-      row.classList.remove('dragging');
-      document.querySelectorAll('.block-row').forEach(r => r.classList.remove('drag-over'));
-    });
-    row.addEventListener('dragover', e => {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
-      document.querySelectorAll('.block-row').forEach(r => r.classList.remove('drag-over'));
-      row.classList.add('drag-over');
-    });
-    row.addEventListener('drop', e => {
-      e.preventDefault();
-      row.classList.remove('drag-over');
-      const destIdx = parseInt(row.dataset.rowidx);
-      if (srcIdx !== null && srcIdx !== destIdx) {
-        const moved = appData.daily.rows.splice(srcIdx, 1)[0];
-        appData.daily.rows.splice(destIdx, 0, moved);
-        renderBlocks();
-        bindBlockCellEditors();
-        setupBlockDragDrop();
-      }
-      srcIdx = null;
-    });
-  });
-}
-
-// Add a new empty row
-function addBlockRow() {
-  const numCols = appData.daily.columns.length;
-  appData.daily.rows.push(Array(numCols).fill(''));
-  renderBlocks();
-  // Animate + focus first cell of new row
-  setTimeout(() => {
-    const newRow = document.querySelector('#blocks-body .block-row:last-child');
-    if (newRow) {
-      newRow.classList.add('new-row');
-      const firstCell = newRow.querySelector('td.editable-cell');
-      if (firstCell) firstCell.focus();
-    }
-  }, 30);
-}
-
-// Delete a row by index
-function deleteBlockRow(ri) {
-  if (appData.daily.rows.length <= 1) { showToast('Need at least one row 😌'); return; }
-  appData.daily.rows.splice(ri, 1);
-  renderBlocks();
-  showToast('Row removed');
-}
-
-// Open modal to add a new column
-function addBlockColumn() {
-  document.getElementById('modal-title').textContent = 'Add Column';
-  document.getElementById('modal-body').innerHTML =
-    `<input id="m-col-name" type="text" placeholder="Column name (e.g. PRIORITY)" />`;
-  pendingModalCallback = () => {
-    const name = (document.getElementById('m-col-name').value || '').trim() || 'NEW COLUMN';
-    appData.daily.columns.push(name.toUpperCase());
-    appData.daily.rows.forEach(row => row.push(''));
-    renderBlocks();
-    showToast(`“${name}” column added ✓`);
-  };
-  document.getElementById('modal-overlay').classList.remove('hidden');
-}
-
-// Delete a column by index
-function deleteBlockColumn(ci) {
-  if (appData.daily.columns.length <= 1) { showToast('Need at least one column'); return; }
-  if (!confirm(`Delete column "${appData.daily.columns[ci]}"? All data will be lost.`)) return;
-  appData.daily.columns.splice(ci, 1);
-  appData.daily.rows.forEach(row => row.splice(ci, 1));
-  renderBlocks();
-  showToast('Column removed');
-}
-
+// ── EXEC MAP ───────────────────────────────────────────────
 function renderExec() {
-  setEditable('exec.title', appData.exec.title);
-  setEditable('exec.sub',   appData.exec.sub);
-
+  setTxt('exec.title', appData.exec.title);
+  setTxt('exec.sub',   appData.exec.sub);
   const grid = document.getElementById('exec-grid');
   grid.innerHTML = '';
-  appData.exec.weeks.forEach((w, idx) => {
-    const card = document.createElement('div');
-    card.className = 'exec-card';
-    card.innerHTML = `
+  appData.exec.weeks.forEach((w, i) => {
+    const el = document.createElement('div');
+    el.className = 'exec-card';
+    el.innerHTML = `
       <div class="exec-header" style="border-bottom-color:${w.color}">
-        <div class="exec-week" style="color:${w.color}" data-exkey="${idx}.week" data-editable="text">${escHtml(w.week)}</div>
-        <div class="exec-name" data-exkey="${idx}.name" data-editable="text">${escHtml(w.name)}</div>
+        <div class="exec-week"  style="color:${w.color}" data-exkey="${i}.week"  data-editable="text">${esc(w.week)}</div>
+        <div class="exec-name"  data-exkey="${i}.name"  data-editable="text">${esc(w.name)}</div>
       </div>
       <div class="exec-body">
-        <div class="exec-desc"  data-exkey="${idx}.desc"  data-editable="text">${escHtml(w.desc)}</div>
-        <div class="exec-proof" data-exkey="${idx}.proof" data-editable="text">${escHtml(w.proof)}</div>
+        <div class="exec-desc"  data-exkey="${i}.desc"  data-editable="text">${esc(w.desc)}</div>
+        <div class="exec-proof" data-exkey="${i}.proof" data-editable="text">${esc(w.proof)}</div>
       </div>`;
-    grid.appendChild(card);
+    grid.appendChild(el);
   });
-  if (isEditMode) activateExecEditors();
+  if (isEditMode) bindExecEditors();
 }
 
+// ── GOALS ──────────────────────────────────────────────────
 function renderGoalList(type) {
-  const key    = type; // 'longterm' or 'shortterm'
-  const listEl = document.getElementById(`${type}-list`);
-  const items  = appData[key].items;
-
-  setEditable(`${key}.title`, appData[key].title);
-  setEditable(`${key}.sub`,   appData[key].sub);
-
-  listEl.innerHTML = '';
-  items.forEach((item, idx) => {
-    const el = document.createElement('div');
-    el.className = 'goal-item';
-    el.dataset.type = type;
-    el.dataset.idx  = idx;
-    el.innerHTML = `
-      <div class="goal-icon">${escHtml(item.icon)}</div>
+  setTxt(`${type}.title`, appData[type].title);
+  setTxt(`${type}.sub`,   appData[type].sub);
+  const el = document.getElementById(`${type}-list`);
+  el.innerHTML = '';
+  appData[type].items.forEach((item, i) => {
+    const div = document.createElement('div');
+    div.className = 'goal-item';
+    div.innerHTML = `
+      <div class="goal-icon">${esc(item.icon)}</div>
       <div class="goal-content">
-        <div class="goal-item-title" data-goalkey="${type}.${idx}.title" data-editable="text">${escHtml(item.title)}</div>
-        <div class="goal-item-desc"  data-goalkey="${type}.${idx}.desc"  data-editable="text">${escHtml(item.desc)}</div>
+        <div class="goal-item-title" data-goalkey="${type}.${i}.title" data-editable="text">${esc(item.title)}</div>
+        <div class="goal-item-desc"  data-goalkey="${type}.${i}.desc"  data-editable="text">${esc(item.desc)}</div>
         <div class="goal-progress">
           <div class="progress-bar-wrap">
             <div class="progress-bar-fill" style="width:${item.progress}%"></div>
@@ -331,106 +184,192 @@ function renderGoalList(type) {
           <span class="progress-pct">${item.progress}%</span>
         </div>
       </div>
-      <button class="goal-delete" onclick="deleteGoal('${type}', ${idx})" title="Delete">✕</button>`;
-    listEl.appendChild(el);
+      <button class="goal-delete" onclick="deleteGoal('${type}',${i})" title="Delete">✕</button>`;
+    el.appendChild(div);
   });
-  if (isEditMode) activateGoalEditors(type);
+  if (isEditMode) bindGoalEditors(type);
 }
 
+// ── RULES ──────────────────────────────────────────────────
 function renderRules() {
-  setEditable('rules.title', appData.rules.title);
-  setEditable('rules.body',  appData.rules.body);
+  setTxt('rules.title', appData.rules.title);
+  setTxt('rules.body',  appData.rules.body);
 }
 
-// ── INLINE EDITOR BINDING ──────────────────────────────
-function bindInlineEditors() {
-  // Static elements with data-key
-  document.querySelectorAll('[data-key][data-editable]').forEach(el => {
-    el.addEventListener('input', () => {
-      setByPath(appData, el.dataset.key, el.textContent.trim());
-    });
+/* ════════════════════════════════════════════════════════════
+   BLOCKS TABLE — fully dynamic rows + columns
+   Always renders ALL controls (add/del row, add/del col, drag).
+   CSS class ec-* controls visibility based on body.edit-mode.
+   contenteditable is toggled by applyEditableState().
+   ════════════════════════════════════════════════════════════ */
+
+function renderBlocks() {
+  setTxt('daily.title', appData.daily.title);
+  setTxt('daily.sub',   appData.daily.sub);
+
+  const wrap = document.querySelector('.table-wrap');
+  if (!wrap) return;
+  const { columns: cols, rows } = appData.daily;
+
+  // ── HEADER ──
+  const thCells = cols.map((col, ci) => `
+    <th style="position:relative" data-ci="${ci}">
+      <span class="th-label" data-ci="${ci}" contenteditable="false">${esc(col)}</span>
+      ${cols.length > 1
+        ? `<button class="th-del-col ec-flex" onclick="delCol(${ci})" title="Remove column">×</button>`
+        : ''}
+    </th>`).join('');
+
+  // ── BODY ROWS ──
+  const tRows = rows.map((row, ri) => `
+    <tr class="brow" data-ri="${ri}" draggable="false">
+      <td class="td-drag ec-cell" data-ri="${ri}">
+        <span class="drag-icon" title="Drag to reorder">⠿</span>
+      </td>
+      ${cols.map((_, ci) => `
+        <td class="bcell" data-ri="${ri}" data-ci="${ci}"
+            contenteditable="false">${esc(row[ci] ?? '')}</td>`).join('')}
+      <td class="td-del-r ec-cell">
+        <button class="btn-del-row ec-flex" onclick="delRow(${ri})" title="Delete row">✕</button>
+      </td>
+    </tr>`).join('');
+
+  wrap.innerHTML = `
+    <table class="blocks-table" id="btable">
+      <thead>
+        <tr>
+          <th class="th-drag ec-cell"></th>
+          ${thCells}
+          <th class="th-del-r ec-cell"></th>
+        </tr>
+      </thead>
+      <tbody id="btbody">${tRows}</tbody>
+    </table>`;
+
+  // Now apply current edit state to the newly rendered elements
+  applyTableEditableState();
+  if (isEditMode) setupDragDrop();
+}
+
+// Set contenteditable + drag on table elements based on current isEditMode
+function applyTableEditableState() {
+  const ce = isEditMode ? 'true' : 'false';
+  document.querySelectorAll('.th-label, .bcell').forEach(el => {
+    el.contentEditable = ce;
   });
+  document.querySelectorAll('.brow').forEach(row => {
+    row.draggable = isEditMode;
+  });
+  if (isEditMode) {
+    // Bind live input handlers
+    document.querySelectorAll('.th-label[contenteditable="true"]').forEach(span => {
+      span.oninput = () => {
+        appData.daily.columns[+span.dataset.ci] = span.innerText.trim();
+      };
+    });
+    document.querySelectorAll('.bcell[contenteditable="true"]').forEach(td => {
+      td.oninput = () => {
+        const ri = +td.dataset.ri, ci = +td.dataset.ci;
+        appData.daily.rows[ri][ci] = td.innerText.trim();
+      };
+    });
+  }
 }
 
-function activateDayEditors() {
-  document.querySelectorAll('[data-daykey][data-editable]').forEach(el => {
-    if (el._dayBound) return;
-    el._dayBound = true;
-    el.addEventListener('input', () => {
-      const [idx, field] = el.dataset.daykey.split('.');
-      if (field === 'deliverable') {
-        appData.week.days[idx].deliverable = el.textContent.replace(/^Deliverable:\s*/,'').trim();
-      } else {
-        appData.week.days[idx][field] = el.textContent.trim();
+// Drag-to-reorder rows
+function setupDragDrop() {
+  let src = null;
+  document.querySelectorAll('.brow').forEach(row => {
+    row.ondragstart = e => {
+      src = +row.dataset.ri;
+      row.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    };
+    row.ondragend = () => {
+      row.classList.remove('dragging');
+      document.querySelectorAll('.brow').forEach(r => r.classList.remove('drag-over'));
+    };
+    row.ondragover = e => {
+      e.preventDefault();
+      document.querySelectorAll('.brow').forEach(r => r.classList.remove('drag-over'));
+      row.classList.add('drag-over');
+    };
+    row.ondrop = e => {
+      e.preventDefault();
+      row.classList.remove('drag-over');
+      const dest = +row.dataset.ri;
+      if (src !== null && src !== dest) {
+        const moved = appData.daily.rows.splice(src, 1)[0];
+        appData.daily.rows.splice(dest, 0, moved);
+        renderBlocks();
+        if (isEditMode) setupDragDrop();
       }
-    });
+      src = null;
+    };
   });
 }
 
-// (Block editors handled by bindBlockCellEditors() — generated per render)
+// ── ROW / COLUMN CRUD ──────────────────────────────────────
 
-function activateExecEditors() {
-  document.querySelectorAll('[data-exkey][data-editable]').forEach(el => {
-    if (el._exBound) return;
-    el._exBound = true;
-    el.addEventListener('input', () => {
-      const [idx, field] = el.dataset.exkey.split('.');
-      appData.exec.weeks[idx][field] = el.textContent.trim();
-    });
-  });
-}
-
-function activateGoalEditors(type) {
-  document.querySelectorAll(`[data-goalkey^="${type}."][data-editable]`).forEach(el => {
-    if (el._goalBound) return;
-    el._goalBound = true;
-    el.addEventListener('input', () => {
-      const parts = el.dataset.goalkey.split('.');
-      const idx   = parseInt(parts[1]);
-      const field = parts[2];
-      appData[type].items[idx][field] = el.textContent.trim();
-    });
-  });
-}
-
-// ── HARVEST all inline edits → appData ─────────────────
-function harvestInlineEdits() {
-  document.querySelectorAll('[data-key][data-editable]').forEach(el => {
-    setByPath(appData, el.dataset.key, el.textContent.trim());
-  });
-  document.querySelectorAll('[data-daykey]').forEach(el => {
-    const [idx, field] = el.dataset.daykey.split('.');
-    if (field === 'deliverable') {
-      appData.week.days[idx].deliverable = el.textContent.replace(/^Deliverable:\s*/,'').trim();
-    } else {
-      appData.week.days[idx][field] = el.textContent.trim();
+// Add a new empty row
+function addRow() {
+  appData.daily.rows.push(Array(appData.daily.columns.length).fill(''));
+  renderBlocks();
+  setTimeout(() => {
+    const last = document.querySelector('#btbody .brow:last-child');
+    if (last) {
+      last.classList.add('new-row');
+      const c = last.querySelector('.bcell');
+      if (c) c.focus();
     }
-  });
-  // Harvest block table
-  document.querySelectorAll('#blocks-thead .th-label[data-colidx]').forEach(span => {
-    appData.daily.columns[parseInt(span.dataset.colidx)] = span.innerText.trim();
-  });
-  document.querySelectorAll('#blocks-body .block-row').forEach((tr, ri) => {
-    tr.querySelectorAll('td[data-colidx]').forEach(td => {
-      const ci = parseInt(td.dataset.colidx);
-      if (!appData.daily.rows[ri]) appData.daily.rows[ri] = Array(appData.daily.columns.length).fill('');
-      appData.daily.rows[ri][ci] = td.innerText.trim();
-    });
-  });
-  document.querySelectorAll('[data-exkey]').forEach(el => {
-    const [idx, field] = el.dataset.exkey.split('.');
-    appData.exec.weeks[idx][field] = el.textContent.trim();
-  });
-  document.querySelectorAll('[data-goalkey]').forEach(el => {
-    const parts = el.dataset.goalkey.split('.');
-    const type  = parts[0];
-    const idx   = parseInt(parts[1]);
-    const field = parts[2];
-    appData[type].items[idx][field] = el.textContent.trim();
-  });
+  }, 30);
+  toast('Row added ✓');
 }
 
-// ── TOGGLE EDIT MODE ───────────────────────────────────
+// Delete a row by index
+function delRow(ri) {
+  if (appData.daily.rows.length <= 1) { toast('Need at least one row 😌'); return; }
+  appData.daily.rows.splice(ri, 1);
+  renderBlocks();
+  toast('Row removed');
+}
+
+// Open modal to add a column
+function addCol() {
+  document.getElementById('modal-title').textContent = 'Add Column';
+  document.getElementById('modal-body').innerHTML =
+    `<label>Column name</label>
+     <input id="m-col" type="text" placeholder="e.g. PRIORITY" />`;
+  pendingModalCb = () => {
+    const name = (document.getElementById('m-col').value || '').trim().toUpperCase() || 'NEW COLUMN';
+    appData.daily.columns.push(name);
+    appData.daily.rows.forEach(r => r.push(''));
+    renderBlocks();
+    toast(`"${name}" added ✓`);
+  };
+  document.getElementById('modal-overlay').classList.remove('hidden');
+}
+
+// Delete a column by index
+function delCol(ci) {
+  if (appData.daily.columns.length <= 1) { toast('Need at least one column'); return; }
+  if (!confirm(`Delete column "${appData.daily.columns[ci]}"? All data in it will be lost.`)) return;
+  appData.daily.columns.splice(ci, 1);
+  appData.daily.rows.forEach(r => r.splice(ci, 1));
+  renderBlocks();
+  toast('Column removed');
+}
+
+/* ════════════════════════════════════════════════════════════
+   TOGGLE EDIT MODE
+   1. Flip isEditMode
+   2. Toggle body.edit-mode class (CSS does the heavy lifting —
+      shows ec-* controls, outlines text, etc.)
+   3. Apply contenteditable to static [data-editable] elements
+   4. Apply contenteditable to table cells via applyTableEditableState()
+   5. Bind live editors for day / exec / goal elements
+   ════════════════════════════════════════════════════════════ */
+
 function toggleEdit() {
   isEditMode = !isEditMode;
   document.body.classList.toggle('edit-mode', isEditMode);
@@ -438,53 +377,133 @@ function toggleEdit() {
   const btnEdit  = document.getElementById('btn-edit');
   const btnSave  = document.getElementById('btn-save');
   const btnReset = document.getElementById('btn-reset');
-  const btnAddL  = document.getElementById('btn-add-long');
-  const btnAddS  = document.getElementById('btn-add-short');
 
   if (isEditMode) {
-    btnEdit.textContent = '👁️ View Mode';
+    btnEdit.textContent  = '👁️ View Mode';
     btnSave.classList.remove('hidden');
     btnReset.classList.remove('hidden');
-    btnAddL.style.display = '';
-    btnAddS.style.display = '';
-
-    // Make static elements contenteditable
-    document.querySelectorAll('[data-editable]').forEach(el => {
-      el.contentEditable = 'true';
-    });
-    renderBlocks(); // re-render with edit controls (drag handles, add col/row buttons)
-    activateDayEditors();
-    activateExecEditors();
-    activateGoalEditors('longterm');
-    activateGoalEditors('shortterm');
-    showToast('Edit Mode ON — click any text to edit ✏️');
+    document.getElementById('btn-add-long').style.display = '';
+    document.getElementById('btn-add-short').style.display = '';
+    applyEditableState(true);
+    toast('Edit Mode ON — click any text to edit ✏️');
   } else {
-    btnEdit.textContent = '✏️ Edit Mode';
+    btnEdit.textContent  = '✏️ Edit Mode';
     btnSave.classList.add('hidden');
     btnReset.classList.add('hidden');
-    btnAddL.style.display = 'none';
-    btnAddS.style.display = 'none';
-    renderBlocks(); // re-render without edit controls
-    document.querySelectorAll('[data-editable]').forEach(el => {
-      el.contentEditable = 'false';
-    });
-    showToast('View Mode — edits are live until page reload');
+    document.getElementById('btn-add-long').style.display  = 'none';
+    document.getElementById('btn-add-short').style.display = 'none';
+    applyEditableState(false);
+    toast('View Mode — click Save to persist changes');
   }
 }
 
-// ── ADD / DELETE GOALS ─────────────────────────────────
-function addGoal(type) {
-  const title = document.getElementById('modal-title');
-  const body  = document.getElementById('modal-body');
-  title.textContent = type === 'long' ? 'Add Long-Term Goal' : 'Add Short-Term Goal';
-  body.innerHTML = `
-    <input id="m-icon"  type="text"     placeholder="Icon emoji (e.g. 🎯)" maxlength="4" />
-    <input id="m-title" type="text"     placeholder="Goal title" />
-    <textarea id="m-desc"              placeholder="Short description"></textarea>
-    <label style="font-size:.82rem;color:var(--text-muted)">Progress %</label>
-    <input id="m-prog"  type="number"  min="0" max="100" value="0" />`;
+// Central function: apply (or remove) contenteditable to all editable elements
+function applyEditableState(on) {
+  const ce = on ? 'true' : 'false';
 
-  pendingModalCallback = () => {
+  // Static [data-editable] elements (hero, cards, section titles, etc.)
+  document.querySelectorAll('[data-editable="text"]').forEach(el => {
+    el.contentEditable = ce;
+  });
+
+  // Table: th-label spans and body cells
+  applyTableEditableState();
+
+  if (on) {
+    // Bind editors for day grid, exec grid, goal lists
+    bindDayEditors();
+    bindExecEditors();
+    bindGoalEditors('longterm');
+    bindGoalEditors('shortterm');
+    // Bind static data-key elements
+    document.querySelectorAll('[data-key][data-editable]').forEach(el => {
+      el.oninput = () => setByPath(appData, el.dataset.key, el.textContent.trim());
+    });
+    // Setup drag-drop on table
+    setupDragDrop();
+  }
+}
+
+// ── EDITOR BINDERS ─────────────────────────────────────────
+function bindDayEditors() {
+  document.querySelectorAll('[data-daykey][data-editable]').forEach(el => {
+    el.oninput = () => {
+      const [i, f] = el.dataset.daykey.split('.');
+      if (f === 'deliverable')
+        appData.week.days[i].deliverable = el.textContent.replace(/^Deliverable:\s*/,'').trim();
+      else
+        appData.week.days[i][f] = el.textContent.trim();
+    };
+  });
+}
+
+function bindExecEditors() {
+  document.querySelectorAll('[data-exkey][data-editable]').forEach(el => {
+    el.oninput = () => {
+      const [i, f] = el.dataset.exkey.split('.');
+      appData.exec.weeks[i][f] = el.textContent.trim();
+    };
+  });
+}
+
+function bindGoalEditors(type) {
+  document.querySelectorAll(`[data-goalkey^="${type}."]`).forEach(el => {
+    el.oninput = () => {
+      const [, i, f] = el.dataset.goalkey.split('.');
+      appData[type].items[+i][f] = el.textContent.trim();
+    };
+  });
+}
+
+// ── HARVEST ALL EDITS → appData ────────────────────────────
+function harvestAll() {
+  // Static keyed elements
+  document.querySelectorAll('[data-key][data-editable]').forEach(el => {
+    setByPath(appData, el.dataset.key, el.textContent.trim());
+  });
+  // Day grid
+  document.querySelectorAll('[data-daykey]').forEach(el => {
+    const [i, f] = el.dataset.daykey.split('.');
+    if (f === 'deliverable')
+      appData.week.days[i].deliverable = el.textContent.replace(/^Deliverable:\s*/,'').trim();
+    else
+      appData.week.days[i][f] = el.textContent.trim();
+  });
+  // Exec
+  document.querySelectorAll('[data-exkey]').forEach(el => {
+    const [i, f] = el.dataset.exkey.split('.');
+    appData.exec.weeks[i][f] = el.textContent.trim();
+  });
+  // Goals
+  document.querySelectorAll('[data-goalkey]').forEach(el => {
+    const [t, i, f] = el.dataset.goalkey.split('.');
+    appData[t].items[+i][f] = el.textContent.trim();
+  });
+  // Table columns
+  document.querySelectorAll('.th-label[data-ci]').forEach(span => {
+    appData.daily.columns[+span.dataset.ci] = span.innerText.trim();
+  });
+  // Table cells
+  document.querySelectorAll('.bcell[data-ri]').forEach(td => {
+    const ri = +td.dataset.ri, ci = +td.dataset.ci;
+    appData.daily.rows[ri][ci] = td.innerText.trim();
+  });
+}
+
+// ── GOAL ADD / DELETE ───────────────────────────────────────
+function addGoal(type) {
+  document.getElementById('modal-title').textContent =
+    type === 'long' ? 'Add Long-Term Goal' : 'Add Short-Term Goal';
+  document.getElementById('modal-body').innerHTML = `
+    <label>Icon emoji</label>
+    <input id="m-icon"  type="text" placeholder="🎯" maxlength="4" />
+    <label>Goal title</label>
+    <input id="m-title" type="text" placeholder="What you want to achieve" />
+    <label>Description</label>
+    <textarea id="m-desc" placeholder="Brief description"></textarea>
+    <label>Progress % (0–100)</label>
+    <input id="m-prog" type="number" min="0" max="100" value="0" />`;
+  pendingModalCb = () => {
     const key = type === 'long' ? 'longterm' : 'shortterm';
     appData[key].items.push({
       icon:     document.getElementById('m-icon').value  || '🎯',
@@ -493,11 +512,10 @@ function addGoal(type) {
       progress: parseInt(document.getElementById('m-prog').value) || 0
     });
     renderGoalList(key);
-    bindInlineEditors();
     if (isEditMode) {
-      document.querySelectorAll('[data-editable]').forEach(el => { el.contentEditable = 'true'; });
-      activateGoalEditors(key);
+      applyEditableState(true);
     }
+    toast('Goal added ✓');
   };
   document.getElementById('modal-overlay').classList.remove('hidden');
 }
@@ -506,74 +524,72 @@ function deleteGoal(type, idx) {
   if (!isEditMode) return;
   appData[type].items.splice(idx, 1);
   renderGoalList(type);
-  if (isEditMode) {
-    document.querySelectorAll('[data-editable]').forEach(el => { el.contentEditable = 'true'; });
-    activateGoalEditors(type);
-  }
+  if (isEditMode) { bindGoalEditors(type); applyEditableState(true); }
 }
 
-// ── MODAL ──────────────────────────────────────────────
+// ── MODAL ───────────────────────────────────────────────────
 function confirmModal() {
-  if (pendingModalCallback) pendingModalCallback();
-  pendingModalCallback = null;
-  closeModalDirect();
+  if (pendingModalCb) pendingModalCb();
+  pendingModalCb = null;
+  closeModal();
 }
-
-function closeModal(e) {
-  if (e.target === document.getElementById('modal-overlay')) closeModalDirect();
+function closeModalOverlay(e) {
+  if (e.target === document.getElementById('modal-overlay')) closeModal();
 }
-
-function closeModalDirect() {
+function closeModal() {
   document.getElementById('modal-overlay').classList.add('hidden');
-  pendingModalCallback = null;
+  pendingModalCb = null;
 }
 
-// ── UTILS ──────────────────────────────────────────────
-function setEditable(key, value) {
+// ── UTILS ───────────────────────────────────────────────────
+function setTxt(key, val) {
   const el = document.querySelector(`[data-key="${key}"]`);
-  if (el) el.textContent = value;
+  if (el) el.textContent = val;
 }
 
-function setByPath(obj, path, value) {
-  const parts = path.split('.');
-  let cur = obj;
-  for (let i = 0; i < parts.length - 1; i++) {
-    const k = isNaN(parts[i]) ? parts[i] : parseInt(parts[i]);
-    cur = cur[k];
+function setByPath(obj, path, val) {
+  const p = path.split('.');
+  let o = obj;
+  for (let i = 0; i < p.length - 1; i++) {
+    const k = isNaN(p[i]) ? p[i] : +p[i];
+    o = o[k];
   }
-  const last = isNaN(parts[parts.length-1]) ? parts[parts.length-1] : parseInt(parts[parts.length-1]);
-  cur[last] = value;
+  const last = isNaN(p[p.length-1]) ? p[p.length-1] : +p[p.length-1];
+  o[last] = val;
 }
 
-function escHtml(str) {
-  return String(str)
-    .replace(/&/g,'&amp;')
-    .replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;')
-    .replace(/"/g,'&quot;');
+function esc(s) {
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-function showToast(msg) {
-  let toast = document.getElementById('toast');
-  if (!toast) {
-    toast = document.createElement('div');
-    toast.id = 'toast';
-    Object.assign(toast.style, {
-      position:'fixed', bottom:'24px', right:'24px',
-      background:'#1e3a5f', color:'#fff',
-      padding:'12px 20px', borderRadius:'10px',
-      fontWeight:'600', fontSize:'.88rem',
+function toast(msg) {
+  let t = document.getElementById('_toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = '_toast';
+    Object.assign(t.style, {
+      position:'fixed', bottom:'22px', right:'22px',
+      background:'#12203a', color:'#fff',
+      padding:'11px 18px', borderRadius:'10px',
+      fontWeight:'700', fontSize:'.84rem',
       boxShadow:'0 4px 20px rgba(0,0,0,.3)',
-      zIndex:'9999', transition:'opacity .3s',
-      fontFamily: "'Inter',sans-serif"
+      zIndex:'9999', transition:'opacity .3s, transform .3s',
+      fontFamily:"'Inter',sans-serif",
+      transform:'translateY(0)'
     });
-    document.body.appendChild(toast);
+    document.body.appendChild(t);
   }
-  toast.textContent = msg;
-  toast.style.opacity = '1';
-  clearTimeout(toast._t);
-  toast._t = setTimeout(() => { toast.style.opacity = '0'; }, 2500);
+  t.textContent = msg;
+  t.style.opacity = '1';
+  t.style.transform = 'translateY(0)';
+  clearTimeout(t._t);
+  t._t = setTimeout(() => {
+    t.style.opacity = '0';
+    t.style.transform = 'translateY(8px)';
+  }, 2400);
 }
 
-// ── START ──────────────────────────────────────────────
+// ── BOOT ────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', init);
