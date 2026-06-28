@@ -232,7 +232,10 @@ function renderGoalList(type) {
             <div class="prog-fill" style="width:${item.progress}%"></div>
           </div>
           <span class="prog-pct ec-hide">${item.progress}%</span>
-          <button class="ec-flex prog-edit" onclick="editProgress('${type}', ${i})">${item.progress}% ✎</button>
+          <div class="ec-flex prog-slider-container">
+            <input type="range" class="prog-slider" min="0" max="100" value="${item.progress}" oninput="setGoalProgress('${type}', ${i}, this.value)" onchange="saveData()">
+            <span class="prog-pct">${item.progress}%</span>
+          </div>
         </div>
       </div>
       <button class="goal-delete" onclick="deleteGoal('${type}',${i})" title="Delete goal">✕</button>`;
@@ -609,6 +612,17 @@ function editProgress(type, gIdx) {
       renderGoalList(type);
       if (isEditMode) { applyEditState(true); }
     });
+}
+
+function setGoalProgress(type, gIdx, val) {
+  const v = parseInt(val) || 0;
+  appData[type].items[gIdx].progress = v;
+  const list = document.getElementById(`${type}-list`);
+  if (!list || !list.children[gIdx]) return;
+  const itemEl = list.children[gIdx];
+  const fill = itemEl.querySelector('.prog-fill');
+  if (fill) fill.style.width = v + '%';
+  itemEl.querySelectorAll('.prog-pct').forEach(el => el.textContent = v + '%');
 }
 
 function addDay() {

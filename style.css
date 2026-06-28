@@ -602,8 +602,9 @@ body.edit-mode .bcell[contenteditable="true"]:focus {
 }
 @keyframes shimmer { 0%{transform:translateX(-100%)} 100%{transform:translateX(200%)} }
 .prog-pct { font-size: .78rem; font-weight: 800; color: var(--accent); white-space: nowrap; }
-.prog-edit { font-size: .75rem; font-weight: 800; color: #fff; background: var(--accent); border: none; padding: 3px 8px; border-radius: 5px; cursor: pointer; transition: all .15s; }
-.prog-edit:hover { filter: brightness(1.15); transform: translateY(-1px); }
+
+.prog-slider-container { display: flex; align-items: center; gap: 8px; flex: 1; }
+.prog-slider { flex: 1; accent-color: var(--accent); cursor: pointer; height: 4px; }
 
 .goal-delete {
   position: absolute; top: 12px; right: 12px;
