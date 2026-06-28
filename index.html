@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Goal Organizer — My Master Plan</title>
-  <meta name="description" content="Customizable goal organizer: long-term goals, short-term goals, weekly schedule, daily time blocks, and execution roadmap." />
+  <meta name="description" content="Customizable goal organizer: long-term goals, short-term goals, weekly schedule, daily time blocks, and phased execution roadmap." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
@@ -12,61 +12,74 @@
 </head>
 <body>
 
-  <!-- ══ TOOLBAR ══════════════════════════════════════════ -->
-  <div id="toolbar">
+  <!-- Background decorative blobs -->
+  <div class="bg-blobs" aria-hidden="true">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+  </div>
+
+  <!-- ══ TOOLBAR ═══════════════════════════════════════════════ -->
+  <header id="toolbar">
     <div class="toolbar-inner">
       <div class="toolbar-brand">
-        <span class="toolbar-dot"></span>
-        Goal Organizer
+        <span class="brand-dot"></span>
+        <span>Goal Organizer</span>
       </div>
       <div class="toolbar-actions">
-        <button id="btn-edit"  class="btn-tb primary"  onclick="toggleEdit()">✏️ Edit Mode</button>
-        <button id="btn-save"  class="btn-tb success hidden" onclick="saveData()">💾 Save</button>
-        <button id="btn-reset" class="btn-tb danger  hidden" onclick="resetData()">↩ Reset</button>
-        <button class="btn-tb ghost" onclick="exportJSON()">📤 Export</button>
-        <button class="btn-tb ghost" onclick="document.getElementById('imp').click()">📥 Import</button>
+        <button id="btn-edit"  class="tb-btn tb-primary"  onclick="toggleEdit()">✏️ Edit Mode</button>
+        <button id="btn-save"  class="tb-btn tb-success hidden" onclick="saveData()">💾 Save</button>
+        <button id="btn-reset" class="tb-btn tb-danger  hidden" onclick="resetData()">↩ Reset</button>
+        <div class="tb-divider"></div>
+        <button class="tb-btn tb-ghost" onclick="exportJSON()">📤 Export</button>
+        <button class="tb-btn tb-ghost" onclick="document.getElementById('imp').click()">📥 Import</button>
         <input type="file" id="imp" accept=".json" style="display:none" onchange="importJSON(event)" />
-        <button class="btn-tb ghost" onclick="window.print()">🖨️ Print</button>
-        <button id="btn-dark" class="btn-tb ghost dark-toggle" onclick="toggleDark()">🌙</button>
+        <button class="tb-btn tb-ghost" onclick="window.print()">🖨️</button>
+        <button id="btn-dark" class="tb-btn tb-ghost tb-icon" onclick="toggleDark()" title="Toggle theme">🌙</button>
       </div>
     </div>
-  </div>
+  </header>
 
   <div class="page-wrap">
 
-    <!-- ══ HERO ═════════════════════════════════════════════ -->
+    <!-- ══ HERO ═════════════════════════════════════════════════ -->
     <section class="hero">
+      <div class="hero-glow"></div>
       <div class="hero-badge" data-key="hero.badge" data-editable="text">🎯 MASTER PLAN</div>
       <h1 class="hero-title" data-key="hero.title" data-editable="text">Backend, Big Data &amp; FAANG Prep</h1>
-      <p class="hero-sub1"   data-key="hero.sub1"  data-editable="text">Daily execution plan for OrderStream, system design, DSA, Docker, Kubernetes, cloud, and portfolio growth.</p>
-      <p class="hero-sub2"   data-key="hero.sub2"  data-editable="text">Use this as the default plan. If your schedule differs, shift the blocks but keep the same order.</p>
+      <p class="hero-sub" data-key="hero.sub1" data-editable="text">Daily execution plan for OrderStream, system design, DSA, Docker, Kubernetes, cloud, and portfolio growth.</p>
+      <p class="hero-tip" data-key="hero.sub2" data-editable="text">Use this as the default plan. If your schedule differs, shift the blocks but keep the same priorities.</p>
     </section>
 
-    <!-- ══ GOAL CARDS ════════════════════════════════════════ -->
-    <section class="goal-cards">
-      <div class="goal-card card-primary">
-        <div class="card-label" data-key="cards.0.label" data-editable="text">PRIMARY GOAL</div>
-        <div class="card-title" data-key="cards.0.title" data-editable="text">Build OrderStream</div>
-        <div class="card-desc"  data-key="cards.0.desc"  data-editable="text">One production-style capstone</div>
+    <!-- ══ GOAL CARDS ════════════════════════════════════════════ -->
+    <div class="goal-cards">
+      <div class="goal-card gc-blue">
+        <div class="gc-icon">🚀</div>
+        <div class="gc-label" data-key="cards.0.label" data-editable="text">PRIMARY GOAL</div>
+        <div class="gc-title" data-key="cards.0.title" data-editable="text">Build OrderStream</div>
+        <div class="gc-desc"  data-key="cards.0.desc"  data-editable="text">One production-style capstone</div>
       </div>
-      <div class="goal-card card-daily">
-        <div class="card-label" data-key="cards.1.label" data-editable="text">DAILY HABIT</div>
-        <div class="card-title" data-key="cards.1.title" data-editable="text">Code + commit</div>
-        <div class="card-desc"  data-key="cards.1.desc"  data-editable="text">Small progress every day</div>
+      <div class="goal-card gc-green">
+        <div class="gc-icon">⚡</div>
+        <div class="gc-label" data-key="cards.1.label" data-editable="text">DAILY HABIT</div>
+        <div class="gc-title" data-key="cards.1.title" data-editable="text">Code + commit</div>
+        <div class="gc-desc"  data-key="cards.1.desc"  data-editable="text">Small progress every day</div>
       </div>
-      <div class="goal-card card-edge">
-        <div class="card-label" data-key="cards.2.label" data-editable="text">INTERVIEW EDGE</div>
-        <div class="card-title" data-key="cards.2.title" data-editable="text">DSA + design</div>
-        <div class="card-desc"  data-key="cards.2.desc"  data-editable="text">Explain tradeoffs clearly</div>
+      <div class="goal-card gc-violet">
+        <div class="gc-icon">🧠</div>
+        <div class="gc-label" data-key="cards.2.label" data-editable="text">INTERVIEW EDGE</div>
+        <div class="gc-title" data-key="cards.2.title" data-editable="text">DSA + design</div>
+        <div class="gc-desc"  data-key="cards.2.desc"  data-editable="text">Explain tradeoffs clearly</div>
       </div>
-      <div class="goal-card card-proof">
-        <div class="card-label" data-key="cards.3.label" data-editable="text">PORTFOLIO PROOF</div>
-        <div class="card-title" data-key="cards.3.title" data-editable="text">Docs + demo</div>
-        <div class="card-desc"  data-key="cards.3.desc"  data-editable="text">Show what works, not just claims</div>
+      <div class="goal-card gc-amber">
+        <div class="gc-icon">📸</div>
+        <div class="gc-label" data-key="cards.3.label" data-editable="text">PORTFOLIO PROOF</div>
+        <div class="gc-title" data-key="cards.3.title" data-editable="text">Docs + demo</div>
+        <div class="gc-desc"  data-key="cards.3.desc"  data-editable="text">Show what works, not just claims</div>
       </div>
-    </section>
+    </div>
 
-    <!-- ══ WEEKLY GRID ═══════════════════════════════════════ -->
+    <!-- ══ WEEKLY GRID ════════════════════════════════════════════ -->
     <section class="section">
       <div class="section-header">
         <h2 class="section-title" data-key="week.title" data-editable="text">The Ideal Week</h2>
@@ -75,71 +88,71 @@
       <div class="week-grid" id="week-grid"></div>
     </section>
 
-    <!-- ══ DAILY BLOCKS ══════════════════════════════════════ -->
+    <!-- ══ DAILY BLOCKS ═══════════════════════════════════════════ -->
     <section class="section">
       <div class="section-header">
         <h2 class="section-title" data-key="daily.title" data-editable="text">Ideal Day Blocks</h2>
-        <p  class="section-sub"   data-key="daily.sub"   data-editable="text">Keep the same sequence even if you shift the clock. DSA first, project build second, theory after hands-on work.</p>
+        <p  class="section-sub"   data-key="daily.sub"   data-editable="text">Keep the same sequence even if you shift the clock. DSA first, project build second, theory after.</p>
       </div>
 
-      <!-- Edit action bar — always in DOM, shown via CSS ec-flex when body.edit-mode -->
-      <div class="table-edit-bar ec-flex">
-        <span class="teb-label">✏️ Table Controls:</span>
-        <button class="teb-btn"         onclick="addRow()">＋ Add Row</button>
-        <button class="teb-btn outline" onclick="addCol()">＋ Add Column</button>
-        <div class="teb-sep"></div>
-        <span style="font-size:.74rem;color:var(--text2)">Drag rows to reorder · Click cells to edit · Click × to delete</span>
+      <!-- Edit bar — ALWAYS in DOM; ec-flex shows it when body.edit-mode is active -->
+      <div class="tbl-edit-bar ec-flex">
+        <span class="teb-tag">Edit Mode</span>
+        <button class="teb-action" onclick="addRow()">＋ Add Row</button>
+        <button class="teb-action teb-outline" onclick="addCol()">＋ Add Column</button>
+        <span class="teb-hint">· Drag ⠿ to reorder · Click cell to edit · × to delete</span>
       </div>
 
-      <!-- Table — JS fills this in renderBlocks() -->
       <div class="table-wrap"></div>
     </section>
 
-    <!-- ══ EXECUTION MAP ═════════════════════════════════════ -->
+    <!-- ══ EXECUTION MAP ══════════════════════════════════════════ -->
     <section class="section">
       <div class="section-header">
         <h2 class="section-title" data-key="exec.title" data-editable="text">Six-Week Execution Map</h2>
-        <p  class="section-sub"   data-key="exec.sub"   data-editable="text">This is the fastest sane path from roadmap to portfolio-ready project.</p>
+        <p  class="section-sub"   data-key="exec.sub"   data-editable="text">The fastest sane path from roadmap to portfolio-ready project.</p>
       </div>
       <div class="exec-grid" id="exec-grid"></div>
     </section>
 
-    <!-- ══ LONG-TERM GOALS ════════════════════════════════════ -->
+    <!-- ══ LONG-TERM GOALS ════════════════════════════════════════ -->
     <section class="section">
       <div class="section-header">
         <h2 class="section-title" data-key="longterm.title" data-editable="text">Long-Term Goals</h2>
-        <p  class="section-sub"   data-key="longterm.sub"   data-editable="text">The north stars that everything else feeds into. Review monthly.</p>
+        <p  class="section-sub"   data-key="longterm.sub"   data-editable="text">North stars that guide every decision. Review monthly.</p>
       </div>
       <div class="goals-list" id="longterm-list"></div>
-      <button class="btn-add hidden" id="btn-add-long" onclick="addGoal('long')" style="display:none">＋ Add Long-Term Goal</button>
+      <button class="add-item-btn" id="btn-add-long" onclick="addGoal('long')" style="display:none">＋ Add Long-Term Goal</button>
     </section>
 
-    <!-- ══ SHORT-TERM GOALS ══════════════════════════════════ -->
+    <!-- ══ SHORT-TERM GOALS ═══════════════════════════════════════ -->
     <section class="section">
       <div class="section-header">
         <h2 class="section-title" data-key="shortterm.title" data-editable="text">Short-Term Goals</h2>
-        <p  class="section-sub"   data-key="shortterm.sub"   data-editable="text">Focus items for this week and next. Check off and replace as you go.</p>
+        <p  class="section-sub"   data-key="shortterm.sub"   data-editable="text">This week's focus items. Check off and replace as you go.</p>
       </div>
       <div class="goals-list" id="shortterm-list"></div>
-      <button class="btn-add hidden" id="btn-add-short" onclick="addGoal('short')" style="display:none">＋ Add Short-Term Goal</button>
+      <button class="add-item-btn" id="btn-add-short" onclick="addGoal('short')" style="display:none">＋ Add Short-Term Goal</button>
     </section>
 
-    <!-- ══ RULES ═════════════════════════════════════════════ -->
-    <section class="rules-section">
-      <h3 class="rules-title" data-key="rules.title" data-editable="text">Rules that make this work</h3>
-      <p  class="rules-body"  data-key="rules.body"  data-editable="text">70% building, 20% theory, 10% notes. One commit per day. One demo per week. Sleep before midnight. Missed day? Resume the next block, do not restart the plan.</p>
+    <!-- ══ RULES ══════════════════════════════════════════════════ -->
+    <section class="rules-card">
+      <div class="rules-inner">
+        <h3 class="rules-title" data-key="rules.title" data-editable="text">Rules that make this work</h3>
+        <p  class="rules-body"  data-key="rules.body"  data-editable="text">70% building, 20% theory, 10% notes. One commit per day. One demo per week. Sleep before midnight. Missed day? Resume the next block — do not restart the plan.</p>
+      </div>
     </section>
 
   </div><!-- /page-wrap -->
 
-  <!-- ══ MODAL ════════════════════════════════════════════════ -->
+  <!-- ══ MODAL ══════════════════════════════════════════════════ -->
   <div id="modal-overlay" class="hidden" onclick="closeModalOverlay(event)">
     <div class="modal" onclick="event.stopPropagation()">
       <h3 id="modal-title">Add</h3>
       <div class="modal-body" id="modal-body"></div>
-      <div class="modal-actions">
-        <button class="btn-tb primary" onclick="confirmModal()">Add</button>
-        <button class="btn-tb ghost"   onclick="closeModal()" style="background:var(--surface2);color:var(--text2);border:1.5px solid var(--border)">Cancel</button>
+      <div class="modal-footer">
+        <button class="mb-btn mb-primary" onclick="confirmModal()">Add</button>
+        <button class="mb-btn mb-ghost"   onclick="closeModal()">Cancel</button>
       </div>
     </div>
   </div>
