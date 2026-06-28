@@ -1,0 +1,92 @@
+# ══════════════════════════════════════════════════════════════
+# .github/workflows/deploy.yml
+#
+# GitHub Actions workflow: Deploy Goal Organizer to GitHub Pages
+#
+# HOW IT WORKS (Read this!):
+# ─────────────────────────────────────────────────────────────
+# 1. This file tells GitHub's servers WHAT to do automatically.
+# 2. Every time you push to the `main` branch, GitHub will:
+#    a. Spin up a fresh Ubuntu virtual machine (the "runner")
+#    b. Check out your code onto that machine
+#    c. Upload the files to GitHub Pages (static web hosting)
+# 3. Your site is then live at:
+#    https://<your-github-username>.github.io/<repo-name>/
+#
+# WHY GitHub Actions?
+# ─────────────────────────────────────────────────────────────
+# • It's FREE for public repos (and generous for private ones).
+# • Zero server to manage — GitHub handles everything.
+# • Automatic HTTPS certificate included.
+# • Every `git push` automatically redeploys your site.
+# ══════════════════════════════════════════════════════════════
+
+name: Deploy Goal Organizer to GitHub Pages
+
+# ── TRIGGER ─────────────────────────────────────────────
+# This workflow runs whenever code is pushed to 'main'.
+# You can also manually trigger it from the GitHub UI.
+on:
+  push:
+    branches:
+      - main          # change this to 'master' if your default branch is master
+  workflow_dispatch:  # allows manual trigger from GitHub Actions tab
+
+# ── PERMISSIONS ─────────────────────────────────────────
+# We need write access to GitHub Pages so Actions can
+# publish our files there.
+permissions:
+  contents: read       # read repo files
+  pages:    write      # write to GitHub Pages
+  id-token: write      # authenticate the deployment
+
+# ── CONCURRENCY ─────────────────────────────────────────
+# Ensure only one deployment runs at a time.
+# If a new push arrives while deploying, cancel the old one.
+concurrency:
+  group:              "pages"
+  cancel-in-progress: true
+
+# ── JOBS ────────────────────────────────────────────────
+jobs:
+
+  # ── JOB 1: BUILD (prepare your files) ─────────────────
+  build:
+    runs-on: ubuntu-latest   # fresh Ubuntu VM provided by GitHub
+
+    steps:
+      # STEP 1: Checkout your repository code onto the runner VM
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      # STEP 2: Configure GitHub Pages (sets base URLs etc.)
+      - name: ⚙️ Setup GitHub Pages
+        uses: actions/configure-pages@v4
+
+      # STEP 3: Upload your site files as an artifact.
+      # The `upload-pages-artifact` action packages the files
+      # in the specified path into a special artifact that
+      # the deploy job will pick up.
+      - name: 📤 Upload site files
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # '.' means "upload everything in the root of the repo"
+          # Change to a subfolder like './dist' if you build a framework
+          path: '.'
+
+  # ── JOB 2: DEPLOY (publish to GitHub Pages) ───────────
+  deploy:
+    needs: build         # only runs AFTER the build job succeeds
+    runs-on: ubuntu-latest
+
+    # This section tells GitHub where the deployment goes
+    environment:
+      name: github-pages
+      url:  ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      # STEP 4: Take the artifact from the build job and
+      # publish it to GitHub Pages
+      - name: 🚀 Deploy to GitHub Pages
+        id:   deployment
+        uses: actions/deploy-pages@v4
