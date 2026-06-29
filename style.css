@@ -6,66 +6,132 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 /* ══════════════════════════════════════════════════════════════
-   DESIGN TOKENS
-   Dark mode: html[data-theme="dark"]   (set by JS via setAttribute)
-   Light mode: html[data-theme="light"] or default
+   DESIGN TOKENS  ← Edit only this section to retheme the app
+   ══════════════════════════════════════════════════════════════
+   LIGHT theme uses :root values.
+   DARK  theme overrides only the values that differ.
    ══════════════════════════════════════════════════════════════ */
 :root {
-  /* ── LIGHT THEME ── */
+
+  /* ── ACCENT / BRAND COLORS ─────────────────────────────────
+     Change --accent + --accent2 to instantly retheme buttons,
+     borders, progress bars, and editable outlines.            */
+  --accent:       #4f46e5;         /* primary accent (indigo)  */
+  --accent2:      #7c3aed;         /* secondary accent (violet)*/
+  --accent-rgb:   79,70,229;       /* same as --accent in R G B (for rgba())  */
+
+  /* ── SEMANTIC COLORS ───────────────────────────────────────  */
+  --green:        #059669;         /* success / output cells   */
+  --amber:        #d97706;         /* warnings / amber cards   */
+  --red:          #dc2626;         /* danger / delete actions  */
+  --teal:         #0e7490;         /* tertiary accent          */
+
+  /* ── BACKGROUND & SURFACES ─────────────────────────────────
+     --bg        : full-page background
+     --surface   : glass cards (semi-transparent)
+     --surface-s : solid cards / modal backgrounds
+     --surface2  : input fields, secondary surfaces            */
   --bg:           #f2f4fc;
   --surface:      rgba(255,255,255,0.88);
-  --surface-s:    #ffffff;           /* solid white for elements that need it */
+  --surface-s:    #ffffff;
   --surface2:     rgba(244,245,255,0.95);
-  --border:       rgba(99,102,241,0.13);
-  --border2:      rgba(99,102,241,0.28);
-  --text:         #0f172a;
-  --text2:        #475569;
-  --text3:        #94a3b8;
-  --accent:       #4f46e5;
-  --accent2:      #7c3aed;
-  --accent-rgb:   79,70,229;
-  --green:        #059669;
-  --amber:        #d97706;
-  --red:          #dc2626;
-  --teal:         #0e7490;
-  --c-bar:        rgba(15,23,42,0.97);
-  --c-bar-text:   #f1f5f9;
+
+  /* ── BORDERS ───────────────────────────────────────────────  */
+  --border:       rgba(99,102,241,0.13);   /* subtle borders   */
+  --border2:      rgba(99,102,241,0.28);   /* stronger borders */
+
+  /* ── TEXT ──────────────────────────────────────────────────  */
+  --text:         #0f172a;         /* primary text             */
+  --text2:        #475569;         /* secondary / muted text   */
+  --text3:        #94a3b8;         /* placeholder / faint text */
+
+  /* ── TOP NAVIGATION BAR ────────────────────────────────────  */
+  --c-bar:        rgba(15,23,42,0.97); /* bar background       */
+  --c-bar-text:   #f1f5f9;             /* bar text             */
+  --bar-h:        58px;                /* bar height           */
+
+  /* ── SHADOWS ───────────────────────────────────────────────  */
   --shadow:       0 1px 3px rgba(0,0,0,.05), 0 4px 20px rgba(99,102,241,.07);
   --shadow-h:     0 8px 36px rgba(99,102,241,.18), 0 2px 10px rgba(0,0,0,.06);
   --shadow-lg:    0 20px 60px rgba(0,0,0,.12);
-  --th-grad:      linear-gradient(135deg,#1e1b4b 0%,#3730a3 100%);
-  --r:  12px;
-  --r2: 18px;
-  --r3: 24px;
-  --font:   'Inter',  sans-serif;
-  --font-d: 'Outfit', sans-serif;
-  --bar-h: 58px;
+
+  /* ── TABLE / RULES CARD GRADIENT ───────────────────────────
+     Used for the table header row and the rules card bg.      */
+  --th-grad:      linear-gradient(135deg, #1e1b4b 0%, #3730a3 100%);
+
+  /* ── BORDER RADIUS ─────────────────────────────────────────
+     --r  : small elements (tags, badges)
+     --r2 : cards, table, day cards
+     --r3 : hero, modal, rules card                            */
+  --r:            12px;
+  --r2:           18px;
+  --r3:           24px;
+
+  /* ── TYPOGRAPHY ────────────────────────────────────────────
+     --font  : body / UI text (Inter by default)
+     --font-d: display / headings (Outfit by default)
+     Both loaded from Google Fonts in index.html.             */
+  --font:         'Inter',  sans-serif;
+  --font-d:       'Outfit', sans-serif;
+
+  /* ── TRANSITIONS ───────────────────────────────────────────
+     Global speed for theme switches (bg, color, border).     */
+  --transition-theme: .35s;
+
+  /* ── BACKGROUND BLOBS ──────────────────────────────────────
+     Decorative ambient blobs. Opacity controlled below.
+     Tweak --blob-opacity to make them stronger / subtler.    */
+  --blob-opacity: .45;
 }
 
 html[data-theme="dark"] {
-  /* ── DARK THEME ── */
-  --bg:           #07091a;
-  --surface:      rgba(14,19,42,0.88);
-  --surface-s:    #0e1329;
-  --surface2:     rgba(18,25,55,0.95);
-  --border:       rgba(99,102,241,0.22);
-  --border2:      rgba(99,102,241,0.45);
-  --text:         #e8edf7;
-  --text2:        #8b99b5;
-  --text3:        #576075;
+  /* ══════════════════════════════════════════════════════════
+     DARK THEME OVERRIDES
+     Only values that differ from :root are listed here.
+     Everything else (radii, fonts, bar height, etc.) is
+     inherited automatically from :root.
+     ══════════════════════════════════════════════════════════ */
+
+  /* ── ACCENT ────────────────────────────────────────────────  */
   --accent:       #818cf8;
   --accent2:      #a78bfa;
   --accent-rgb:   129,140,248;
+
+  /* ── SEMANTIC COLORS ───────────────────────────────────────  */
   --green:        #34d399;
   --amber:        #fbbf24;
   --red:          #f87171;
   --teal:         #22d3ee;
+
+  /* ── BACKGROUND & SURFACES ─────────────────────────────────  */
+  --bg:           #07091a;
+  --surface:      rgba(14,19,42,0.88);
+  --surface-s:    #0e1329;
+  --surface2:     rgba(18,25,55,0.95);
+
+  /* ── BORDERS ───────────────────────────────────────────────  */
+  --border:       rgba(99,102,241,0.22);
+  --border2:      rgba(99,102,241,0.45);
+
+  /* ── TEXT ──────────────────────────────────────────────────  */
+  --text:         #e8edf7;
+  --text2:        #8b99b5;
+  --text3:        #576075;
+
+  /* ── NAVIGATION BAR ────────────────────────────────────────  */
   --c-bar:        rgba(5,7,20,0.98);
   --c-bar-text:   #dde4f0;
+
+  /* ── SHADOWS ───────────────────────────────────────────────  */
   --shadow:       0 1px 4px rgba(0,0,0,.5), 0 4px 24px rgba(0,0,0,.35);
   --shadow-h:     0 8px 40px rgba(129,140,248,.22), 0 2px 12px rgba(0,0,0,.6);
   --shadow-lg:    0 20px 70px rgba(0,0,0,.7);
-  --th-grad:      linear-gradient(135deg,#090720 0%,#1e1b4b 100%);
+
+  /* ── TABLE / RULES CARD GRADIENT ───────────────────────────  */
+  --th-grad:      linear-gradient(135deg, #090720 0%, #1e1b4b 100%);
+
+  /* ── BLOBS ─────────────────────────────────────────────────  */
+  --blob-opacity: .28;
 }
 
 /* ── BASE ─────────────────────────────────────────────────── */
@@ -76,7 +142,7 @@ body {
   color: var(--text);
   min-height: 100vh;
   padding-top: var(--bar-h);
-  transition: background .35s, color .35s;
+  transition: background var(--transition-theme), color var(--transition-theme);
 }
 .hidden { display: none !important; }
 
@@ -86,10 +152,10 @@ body {
 }
 .blob {
   position: absolute; border-radius: 50%;
-  filter: blur(80px); opacity: .45;
+  filter: blur(80px); opacity: var(--blob-opacity);
   transition: opacity .4s;
 }
-html[data-theme="dark"] .blob { opacity: .28; }
+html[data-theme="dark"] .blob { opacity: var(--blob-opacity); }
 
 .blob-1 {
   width: 70vw; height: 60vh; top: -20vh; left: -10vw;
